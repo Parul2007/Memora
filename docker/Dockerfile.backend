@@ -1,0 +1,78 @@
+# Dockerfile.backend
+# Multi-stage production backend image for Memora.
+# Installs backend dependencies in an isolated builder stage,
+# keeps runtime image lean, enables local HuggingFace model caching,
+# runs FastAPI under a non-root user, and exposes a health endpoint.
+
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    gcc && \
+    python -m venv ${VIRTUAL_ENV} && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+RUN pip install --upgrade pip setuptools wheel
+
+RUN pip install --default-timeout=1000 --retries=10 torch --index-url https://download.pytorch.org/whl/cpu
+
+RUN pip install --default-timeout=1000 --retries=10 -r requirements.txt
+
+RUN pip install pgvector>=0.2.5
+
+
+
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV MODEL_CACHE_DIR=/app/.model_cache
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl && \
+    groupadd -g 1000 memora && \
+    useradd \
+        --uid 1000 \
+        --gid 1000 \
+        --create-home \
+        --shell /bin/bash \
+        memora && \
+    mkdir -p /app/.model_cache && \
+    chown -R memora:memora /app && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
+
+COPY . /app
+
+RUN mkdir -p /app/.model_cache && \
+    chown -R memora:memora /app
+
+USER memora
+
+EXPOSE 8000
+
+HEALTHCHECK \
+    --interval=30s \
+    --timeout=10s \
+    --start-period=60s \
+    --retries=5 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

@@ -1,0 +1,71 @@
+# ---------- API ----------
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+
+# ---------- Config ----------
+pydantic==2.7.4
+pydantic-settings==2.3.0
+python-dotenv==1.0.1
+
+# ---------- Database ----------
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0
+alembic==1.16.0
+greenlet==3.2.4
+
+# ---------- Redis ----------
+redis[hiredis]==5.0.4
+
+# ---------- Vector ----------
+qdrant-client==1.9.0
+
+# ---------- Graph ----------
+neo4j==5.20.0
+
+# ---------- Workers ----------
+celery[redis]==5.4.0
+
+# ---------- HuggingFace ----------
+huggingface_hub>=0.34,<1.0
+transformers==4.53.0
+accelerate>=1.8,<2.0
+sentence-transformers>=5.0,<6.0
+tokenizers>=0.21,<0.22
+langchain-core>=0.2.43
+langchain-huggingface>=0.1.15
+
+# ---------- Embeddings ----------
+numpy>=2.0,<2.4
+
+# ---------- Networking ----------
+httpx==0.28.1
+aiohttp>=3.9.0
+aiofiles==24.1.0
+
+websockets==12.0
+
+# ---------- Extension Auth ----------
+PyJWT==2.8.0
+python-jose[cryptography]==3.3.0
+cryptography==45.0.6
+
+# ---------- Logging ----------
+structlog==25.4.0
+python-json-logger==3.3.0
+
+# ---------- Upload ----------
+python-multipart==0.0.20
+
+# ---------- Reliability ----------
+tenacity==8.3.0
+
+# ---------- Testing ----------
+pytest==8.4.0
+pytest-asyncio==1.1.0
+
+# ---------- Quality ----------
+ruff==0.12.0
+mypy==1.16.0
+typing-extensions==4.14.1
+gliner>=0.1.12
+pgvector>=0.2.5
