@@ -72,18 +72,12 @@ def _mask_redis_url(
 # decode_responses=True is mandatory —
 # raw bytes silently break session_store.py
 #
-# For Upstash (rediss://), we build a real ssl.SSLContext and pass it
-# as ssl_context. redis-py 5.x does NOT reliably handle ssl_cert_reqs
-# kwarg — the only safe approach is a pre-built SSLContext object.
-_redis_url = settings.redis_url.split("?")[0]  # strip any ?ssl_cert_reqs query params
-
-if _redis_url.startswith("rediss://"):
-    _ssl_context = ssl.create_default_context()
-    _ssl_context.check_hostname = False
-    _ssl_context.verify_mode = ssl.CERT_NONE
-    _ssl_kwargs: dict = {"ssl_context": _ssl_context}
-else:
-    _ssl_kwargs = {}
+# THE CORE CONFLICT FIX:
+# Celery mandates '?ssl_cert_reqs=CERT_NONE' (uppercase) in the URL.
+# aioredis mandates '?ssl_cert_reqs=none' (lowercase) in the URL.
+# We take the URL from settings (which has CERT_NONE for Celery) and
+# rewrite it to lowercase 'none' exclusively for aioredis.
+_redis_url = settings.redis_url.replace("CERT_NONE", "none")
 
 redis_pool = aioredis.ConnectionPool.from_url(
     _redis_url,
@@ -92,7 +86,6 @@ redis_pool = aioredis.ConnectionPool.from_url(
     socket_connect_timeout=5,
     socket_timeout=10,
     retry_on_timeout=True,
-    **_ssl_kwargs,
 )
 
 
