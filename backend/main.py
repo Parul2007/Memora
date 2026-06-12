@@ -154,12 +154,14 @@ async def lifespan(
     )
 
     try:
-        await init_db()
-        
-        from backend.db.neo4j_client import init_neo4j, close_neo4j
-        from backend.db.qdrant_client import init_qdrant, close_qdrant
-        await init_neo4j()
-        await init_qdrant()
+        import os
+        if os.getenv("CI") != "true":
+            await init_db()
+            
+            from backend.db.neo4j_client import init_neo4j, close_neo4j
+            from backend.db.qdrant_client import init_qdrant, close_qdrant
+            await init_neo4j()
+            await init_qdrant()
 
         load_models()
 
@@ -171,8 +173,9 @@ async def lifespan(
         yield
         
         event_router_task.cancel()
-        await close_neo4j()
-        await close_qdrant()
+        if os.getenv("CI") != "true":
+            await close_neo4j()
+            await close_qdrant()
 
     except Exception:
         logger.exception(
