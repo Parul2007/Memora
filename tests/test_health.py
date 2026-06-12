@@ -19,7 +19,11 @@ async def test_readiness_probe_success(async_client: AsyncClient, monkeypatch):
     mock_db.execute.return_value = None
     
     mock_neo4j = AsyncMock()
-    mock_neo4j.session.return_value.__aenter__.return_value.run.return_value = None
+    # Properly mock the async context manager for neo4j.session()
+    mock_session = AsyncMock()
+    mock_session.run = AsyncMock(return_value=None)
+    mock_neo4j.session.return_value.__aenter__.return_value = mock_session
+    mock_neo4j.session.return_value.__aexit__.return_value = None
     
     mock_redis = AsyncMock()
     mock_redis.ping.return_value = True
@@ -32,12 +36,12 @@ async def test_readiness_probe_success(async_client: AsyncClient, monkeypatch):
     from backend.db.neo4j_client import get_neo4j_driver
     from backend.db.redis_client import get_redis_client
     from backend.db.qdrant_client import get_qdrant_client
+    from backend.dependencies import get_db
     
+    app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_neo4j_driver] = lambda: mock_neo4j
     app.dependency_overrides[get_redis_client] = lambda: mock_redis
     app.dependency_overrides[get_qdrant_client] = lambda: mock_qdrant
-    # In an unmocked environment with no DB, it should return 503 degraded.
-    # In an unmocked environment with no DB, it should return 503 degraded.
     
     response = await async_client.get("/health/ready")
     
