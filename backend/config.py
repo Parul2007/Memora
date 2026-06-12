@@ -43,6 +43,18 @@ class Settings(BaseSettings):
         alias="POSTGRES_URL",
     )
 
+    @field_validator("postgres_url", mode="after")
+    @classmethod
+    def validate_postgres_url(cls, v: str) -> str:
+        # Supabase specific fixes to ensure asyncpg and Session pooler
+        if "supabase" in v:
+            v = v.replace(":6543", ":5432")
+            if v.startswith("postgres://"):
+                v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v.startswith("postgresql://"):
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
     # Redis
 
     redis_url: str = Field(
