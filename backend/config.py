@@ -28,7 +28,8 @@ class Settings(BaseSettings):
 
     # HuggingFace
 
-    hf_api_token: str = Field(
+    hf_api_token: str | None = Field(
+        default=None,
         alias="HF_API_TOKEN",
     )
 
