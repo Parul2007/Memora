@@ -26,7 +26,7 @@ class ExploreService:
 
             # Project count
             res_proj = await session.run(
-                "MATCH (p:Entity {user_id: $uid, label: 'project'}) RETURN count(p) as count",
+                "MATCH (p:Entity {user_id: $uid, label: 'product'}) RETURN count(p) as count",
                 uid=str(user_id)
             )
             proj_rec = await res_proj.single()
@@ -81,7 +81,7 @@ class ExploreService:
             result = await session.run(
                 """
                 MATCH (p:Entity {user_id: $uid})
-                WHERE p.label = 'project' OR p.label = 'goal'
+                WHERE p.label = 'product' OR p.label = 'event'
                 OPTIONAL MATCH (p)-[:RELATED_TO]-(neighbor:Entity)
                 WITH p, collect(DISTINCT neighbor) as neighbors
                 OPTIONAL MATCH (p)-[:MENTIONED_IN]->(m:Memory)

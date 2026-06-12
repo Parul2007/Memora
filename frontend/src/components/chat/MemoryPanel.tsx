@@ -8,7 +8,6 @@ import { useChatStore } from '../../stores/chatStore';
 import { 
   ScoreBadge, 
   MemoryLearningCard, 
-  GoalCard, 
   KnowledgeGraphCard, 
   MemoryRetrievalCard, 
   parseCognitiveBlocks, 
@@ -64,14 +63,12 @@ export default function MemoryPanel({
       if (b.type === 'learning' && b.data.memory) {
         // Deduplicate by memory content to prevent double rendering
         unique.set('learning:' + b.data.memory.content, b);
-      } else if (b.type === 'goal' && b.data) {
-        unique.set('goal:' + (b.data.content || b.data.description || b.data.goal_name || b.id), b);
       } else {
         unique.set(b.id, b);
       }
     });
     return Array.from(unique.values())
-      .filter(b => b.type === 'learning' || b.type === 'goal')
+      .filter(b => b.type === 'learning')
       .reverse();
   }, [sessionBlocks, liveBlocks]);
 
@@ -204,7 +201,6 @@ export default function MemoryPanel({
                     transition={{ duration: 0.4 }}
                   >
                     {block.type === 'learning' && <MemoryLearningCard data={block.data} />}
-                    {block.type === 'goal' && <GoalCard data={block.data} />}
                   </motion.div>
                 ))}
               </AnimatePresence>

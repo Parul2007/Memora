@@ -9,10 +9,7 @@ export const MEMORY_EVENTS = {
     MemoryUpdated: 'memora:MemoryUpdated',
     MemoryDeleted: 'memora:MemoryDeleted',
     GraphUpdated: 'memora:GraphUpdated',
-    IntelligenceUpdated: 'memora:IntelligenceUpdated',
     EvolutionUpdated: 'memora:EvolutionUpdated',
-    PredictiveUpdated: 'memora:PredictiveUpdated',
-
 } as const;
 
 export type MemoryEventType = typeof MEMORY_EVENTS[keyof typeof MEMORY_EVENTS];
@@ -92,9 +89,7 @@ async function connectSSE() {
     sse.addEventListener('MemoryUpdated', (e) => emitMemoryEvent(MEMORY_EVENTS.MemoryUpdated, e.data));
     sse.addEventListener('MemoryDeleted', (e) => emitMemoryEvent(MEMORY_EVENTS.MemoryDeleted, e.data));
     sse.addEventListener('GraphUpdated', (e) => emitMemoryEvent(MEMORY_EVENTS.GraphUpdated, e.data));
-    sse.addEventListener('IntelligenceUpdated', (e) => emitMemoryEvent(MEMORY_EVENTS.IntelligenceUpdated, e.data));
     sse.addEventListener('EvolutionUpdated', (e) => emitMemoryEvent(MEMORY_EVENTS.EvolutionUpdated, e.data));
-    sse.addEventListener('PredictionUpdated', (e) => emitMemoryEvent(MEMORY_EVENTS.PredictiveUpdated, e.data));
 
     
     sse.onerror = (err) => {
@@ -148,24 +143,16 @@ export function initializeGlobalReactivity() {
     });
     
     // Mount once in root layout
-    subscribeToMemoryEvent(MEMORY_EVENTS.IntelligenceUpdated, () => {
-        invalidateQueries(['/api/intelligence']);
-    });
-
     subscribeToMemoryEvent(MEMORY_EVENTS.GraphUpdated, () => {
         invalidateQueries(['/api/graph']);
     });
 
-    subscribeToMemoryEvent(MEMORY_EVENTS.PredictiveUpdated, () => {
-        invalidateQueries(['/api/predictive']);
-    });
-
     subscribeToMemoryEvent(MEMORY_EVENTS.MemoryUpdated, () => {
-        invalidateQueries(['/api/memory', '/api/graph', '/api/goals', '/api/dashboard', '/api/intelligence', '/api/predictive']);
+        invalidateQueries(['/api/memory', '/api/graph', '/api/dashboard']);
     });
     
     subscribeToMemoryEvent(MEMORY_EVENTS.MemoryDeleted, () => {
-        invalidateQueries(['/api/memory', '/api/graph', '/api/goals', '/api/dashboard', '/api/intelligence', '/api/predictive']);
+        invalidateQueries(['/api/memory', '/api/graph', '/api/dashboard']);
     });
     
 

@@ -71,28 +71,6 @@ export function MemoryLearningCard({ data }: { data: any }) {
   );
 }
 
-export function GoalCard({ data }: { data: any }) {
-  return (
-    <div style={{ backgroundColor: '#000000', border: '1px solid #d4af37', borderRadius: '10px', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <Target size={14} color="#d4af37" />
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#d4af37', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Goal Tracked
-        </span>
-      </div>
-      <p style={{ margin: 0, fontSize: '13px', color: '#fef08a', lineHeight: '1.5', fontWeight: 500 }}>
-        {data.description || data.goal_name || data.content}
-      </p>
-      {data.status && (
-        <div style={{ marginTop: '4px' }}>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: '#000000', backgroundColor: '#d4af37', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-            {data.status}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function KnowledgeGraphCard({ data }: { data: any }) {
   return (
@@ -154,7 +132,7 @@ export function MemoryRetrievalCard({ data }: { data: any }) {
 
 export interface CognitiveBlock {
   id: string;
-  type: 'learning' | 'graph' | 'retrieval' | 'goal';
+  type: 'learning' | 'graph' | 'retrieval';
   timestamp: string;
   data: any;
 }
@@ -188,8 +166,6 @@ export function parseCognitiveBlocks(events: any[], prefix: string = '') {
       }
     } else if (eventType === 'graph_update') {
       result.push({ id: blockId + '-graph', type: 'graph', timestamp: ts, data: evt.data });
-    } else if (eventType === 'goal_tracked') {
-      result.push({ id: blockId + '-goal', type: 'goal', timestamp: ts, data: evt.data });
     }
   });
 

@@ -16,7 +16,6 @@ export default function ChatInput({ value, onChange, onSend, isGenerating, onSto
   
   const SLASH_COMMANDS = [
     { cmd: '/summarize', desc: 'Summarize the current session' },
-    { cmd: '/goals', desc: 'List current goals' },
     { cmd: '/reflect', desc: 'Trigger deep reflection' },
     { cmd: '/export', desc: 'Export this session' }
   ];

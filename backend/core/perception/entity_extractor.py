@@ -21,16 +21,9 @@ DEFAULT_LABELS = [
     "place",
     "organization",
     "date",
-    "time",
     "event",
     "product",
     "concept",
-    "emotion",
-    "goal",
-    "habit",
-    "preference",
-    "topic",
-    "relationship",
 ]
 
 

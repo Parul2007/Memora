@@ -10,7 +10,7 @@ import { apiFetch } from './apiClient';
 export interface GraphNode {
   id: string;
   name: string;
-  type: 'person' | 'place' | 'org' | 'concept' | 'goal' | 'event' | 'habit';
+  type: 'person' | 'place' | 'organization' | 'date' | 'event' | 'product' | 'concept';
   val: number;
   mentions: number;
   firstSeen?: string;

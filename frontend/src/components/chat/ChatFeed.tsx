@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { useChatStore } from '../../stores/chatStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { parseCognitiveBlocks, MemoryRetrievalCard, KnowledgeGraphCard, GoalCard, MemoryLearningCard } from './CognitiveBlocks';
+import { parseCognitiveBlocks, MemoryRetrievalCard, KnowledgeGraphCard, MemoryLearningCard } from './CognitiveBlocks';
 
 // Relative time formatting helper
 function getRelativeTimeString(dateInput?: string | Date): string {
@@ -208,8 +208,6 @@ function MessageBubble({ msg, isLast, onMemoryPillClick, onRegenerate, onEditMes
       parsed.forEach(b => {
         if (b.type === 'learning' && b.data.memory) {
           unique.set('learning:' + b.data.memory.content, b);
-        } else if (b.type === 'goal' && b.data) {
-          unique.set('goal:' + (b.data.content || b.data.description || b.data.goal_name || b.id), b);
         } else {
           unique.set(b.id, b);
         }
@@ -382,7 +380,6 @@ function MessageBubble({ msg, isLast, onMemoryPillClick, onRegenerate, onEditMes
           {cognitiveBlocks.map(b => {
             if (b.type === 'retrieval') return <MemoryRetrievalCard key={b.id} data={b.data} />;
             if (b.type === 'graph') return <KnowledgeGraphCard key={b.id} data={b.data} />;
-            if (b.type === 'goal') return <GoalCard key={b.id} data={b.data} />;
             if (b.type === 'learning') return <MemoryLearningCard key={b.id} data={b.data} />;
             return null;
           })}
