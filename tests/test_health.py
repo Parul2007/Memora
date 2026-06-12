@@ -36,9 +36,9 @@ async def test_readiness_probe_success(async_client: AsyncClient, monkeypatch):
     from backend.db.neo4j_client import get_neo4j_driver
     from backend.db.redis_client import get_redis_client
     from backend.db.qdrant_client import get_qdrant_client
-    from backend.dependencies import get_db
+    from backend.db.postgres import get_async_session
     
-    app.dependency_overrides[get_db] = lambda: mock_db
+    app.dependency_overrides[get_async_session] = lambda: mock_db
     app.dependency_overrides[get_neo4j_driver] = lambda: mock_neo4j
     app.dependency_overrides[get_redis_client] = lambda: mock_redis
     app.dependency_overrides[get_qdrant_client] = lambda: mock_qdrant
