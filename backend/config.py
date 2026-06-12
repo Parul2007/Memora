@@ -132,16 +132,16 @@ class Settings(BaseSettings):
     )
 
     llm_model_name: str = Field(
-        default="meta-llama/Llama-3.1-70B-Instruct",
+        default="Qwen/Qwen2.5-72B-Instruct",
         alias="LLM_MODEL_NAME",
     )
 
     llm_fast_model_name: str = Field(
-        default="mistralai/Mistral-7B-Instruct-v0.3",
+        default="Qwen/Qwen2.5-7B-Instruct",
         alias="LLM_FAST_MODEL_NAME",
     )
 
-    model_cache_dir: str = Field(
+    local_model_cache_dir: str = Field(
         default="./.model_cache",
         alias="MODEL_CACHE_DIR",
     )

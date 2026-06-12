@@ -10,10 +10,16 @@ dist/
 build/
 
 *.pyc
-
 requirements.lock.txt
 .model_cache/
 logs.txt
 logs2.txt
 .next/
 frontend/.env.local
+
+# Logs
+*.log
+
+# Trace files
+trace*
+*_trace*

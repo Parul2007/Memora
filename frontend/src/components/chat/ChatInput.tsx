@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Send, Paperclip, Mic, Square } from 'lucide-react';
+import { Send, Paperclip, Mic, Square, FileText } from 'lucide-react';
 import { usePrecompute } from '../../hooks/usePrecompute';
 
 export default function ChatInput({ value, onChange, onSend, isGenerating, onStop }: { value: string, onChange: (val: string) => void, onSend: (attachments: {name: string, content: string}[]) => void, isGenerating?: boolean, onStop?: () => void }) {
@@ -221,7 +221,7 @@ export default function ChatInput({ value, onChange, onSend, isGenerating, onSto
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {attachments.map((att, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600 }}>
-                  📄 {att.name}
+                  <FileText size={14} /> {att.name}
                   <button 
                     onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
                     style={{ background: 'none', border: 'none', color: '#166534', cursor: 'pointer', padding: 0, marginLeft: '4px', fontSize: '14px', lineHeight: 1 }}

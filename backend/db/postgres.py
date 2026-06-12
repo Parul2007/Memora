@@ -13,6 +13,7 @@ Provides:
 
 from __future__ import annotations
 
+import contextvars
 import logging
 from collections.abc import AsyncGenerator
 from urllib.parse import urlsplit
@@ -30,6 +31,15 @@ from backend.config import settings
 
 
 logger = logging.getLogger(__name__)
+
+# Context variable for per-task DB session factory.
+# When set (e.g., by a Celery worker), all code that imports and uses
+# AsyncSessionLocal or get_async_session will automatically get sessions
+# from the task-local factory. No global state mutation needed.
+# Contextvars are per-task and cannot leak across concurrent workers.
+task_session_var: contextvars.ContextVar = contextvars.ContextVar(
+    'task_db_session_factory', default=None
+)
 
 # Force pgvector registration/import visibility
 _VECTOR_TYPE = Vector
@@ -84,11 +94,45 @@ logger.info(
     _mask_postgres_url(settings.postgres_url),
 )
 
-AsyncSessionLocal = async_sessionmaker(
+# Default module-level session factory.
+# All code imports AsyncSessionLocal. To support task-local overrides,
+# we wrap it in a function that checks the contextvar first.
+# This is the ONLY place session factory resolution happens.
+# No global mutation occurs at any point.
+_ASYNC_SESSION_MAKER = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
+
+def _get_session_factory():
+    """Return task-local factory if set, otherwise the module-level default.
+    
+    Called at session creation time (not module import time), so it
+    reliably picks up contextvars set by the current task/worker.
+    This is the key to Bug 1 fix: stores import AsyncSessionLocal at
+    module level, but the actual factory is resolved lazily.
+    """
+    task_factory = task_session_var.get()
+    return task_factory if task_factory is not None else _ASYNC_SESSION_MAKER
+
+class _AsyncSessionLocalProxy:
+    """Proxy that delegates to the correct session factory at call time.
+    
+    Stores import `AsyncSessionLocal` at module level and use it as
+    `AsyncSessionLocal()`. This proxy ensures that when it's called,
+    the contextvar is checked and the task-local factory is used if set.
+    No global state is mutated — the proxy simply delegates.
+    """
+    def __call__(self, *args, **kwargs):
+        factory = _get_session_factory()
+        return factory(*args, **kwargs)
+
+# Replace the module-level session maker with a proxy.
+# Stores continue to `from backend.db.postgres import AsyncSessionLocal`
+# and use `AsyncSessionLocal()` as before — they transparently pick up
+# the task-local factory when set.
+AsyncSessionLocal = _AsyncSessionLocalProxy()
 
 
 async def _warm_pool() -> None:
@@ -106,7 +150,8 @@ async def _warm_pool() -> None:
 
 async def get_async_session(
 ) -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionLocal() as session:
+    factory = _get_session_factory()
+    async with factory() as session:
         try:
             yield session
             await session.commit()
@@ -176,4 +221,5 @@ __all__ = [
     "get_async_session",
     "init_db",
     "close_db",
+    "task_session_var",
 ]

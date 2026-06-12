@@ -14,7 +14,7 @@ from sqlalchemy import text
 from backend.config import settings
 
 from backend.db.postgres import (
-    get_async_session,
+    AsyncSessionLocal,
 )
 
 from backend.models.memory import (
@@ -163,7 +163,7 @@ class SemanticStore:
 
     def __init__(
         self,
-        session_factory=get_async_session,
+        session_factory=AsyncSessionLocal,
     ) -> None:
 
         self.session_factory = (
@@ -191,14 +191,49 @@ class SemanticStore:
     def _hydrate(
         row,
     ) -> Memory:
-
+        data = dict(row._mapping)
+        if isinstance(data.get("embedding"), str):
+            import json
+            try:
+                data["embedding"] = json.loads(data["embedding"])
+            except Exception:
+                pass
         return Memory.model_validate(
-            dict(
-                row._mapping
-            )
+            data
         )
 
 
+
+    async def list_recent(
+        self,
+        user_id: UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[Memory]:
+        try:
+            query = text(
+                """
+                SELECT *
+                FROM memories
+                WHERE user_id = :user_id
+                  AND memory_type = 'semantic'
+                ORDER BY created_at DESC
+                LIMIT :limit OFFSET :offset
+                """
+            )
+            async with self.session_factory() as session:
+                result = await session.execute(
+                    query,
+                    {
+                        "user_id": user_id,
+                        "limit": limit,
+                        "offset": offset,
+                    },
+                )
+                rows = result.fetchall()
+            return [self._hydrate(row) for row in rows]
+        except Exception as exc:
+            raise SemanticStoreError(f"List recent failed: {exc}") from exc
 
     async def save(
         self,
@@ -211,6 +246,7 @@ class SemanticStore:
                 memory_create.embedding
             )
 
+            import json
             payload = (
                 memory_create
                 .model_dump(
@@ -218,6 +254,8 @@ class SemanticStore:
                 )
             )
             payload["embedding"] = str(payload["embedding"])
+            payload["entities"] = json.dumps(payload.get("entities", []) or [])
+            payload["metadata"] = json.dumps(payload.get("metadata", {}) or {})
 
             async with (
                 self.session_factory()

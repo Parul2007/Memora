@@ -113,7 +113,6 @@ class UserContext(BaseModel):
         le=1.0,
     )
 
-    active_goals_count: int = 0
 
     total_memories_count: int = 0
 

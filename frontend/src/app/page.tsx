@@ -28,7 +28,7 @@ export default function LandingPage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
         style={{ 
-          width: '100%', height: '560px', 
+          width: '100%', height: '540px', 
           backgroundColor: '#e5e5e5', borderRadius: '48px', 
           overflow: 'hidden', position: 'relative',
           boxShadow: '0 20px 40px rgba(0,0,0,0.04)'
@@ -37,7 +37,7 @@ export default function LandingPage() {
         <video 
           ref={videoRef}
           autoPlay loop muted playsInline
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
         >
           <source src="/animation.mp4" type="video/mp4" />
           Your browser does not support the video tag.
@@ -122,7 +122,7 @@ export default function LandingPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}
           style={{
-            backgroundColor: '#F5F5F0',
+            backgroundColor: '#fff0e6',
             borderRadius: '32px', padding: '40px',
             display: 'flex', flexDirection: 'column', gap: '16px',
             position: 'relative', overflow: 'hidden'
@@ -134,28 +134,31 @@ export default function LandingPage() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', maxWidth: '120px', lineHeight: 1.4 }}>Multi-Dimensional Analysis</span>
-              <Link href="/insights" style={{ textDecoration: 'none' }}>
-                <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>Insights <ArrowRight size={14} /></button>
-              </Link>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
               <span style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', maxWidth: '120px', lineHeight: 1.4 }}>Relational Graph Visualisation</span>
               <Link href="/graph" style={{ textDecoration: 'none' }}>
                 <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>Graphs <ArrowRight size={14} /></button>
               </Link>
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', maxWidth: '120px', lineHeight: 1.4 }}>Goal Optimization & Habit Tracking</span>
-              <Link href="/goals" style={{ textDecoration: 'none' }}>
-                <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>Goals <ArrowRight size={14} /></button>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', maxWidth: '120px', lineHeight: 1.4 }}>Memory OS Dashboard</span>
+              <Link href="/memory" style={{ textDecoration: 'none' }}>
+                <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>Dashboard <ArrowRight size={14} /></button>
+              </Link>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', maxWidth: '120px', lineHeight: 1.4 }}>Chronological Timeline Log</span>
+              <Link href="/memory" style={{ textDecoration: 'none' }}>
+                <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>Timeline <ArrowRight size={14} /></button>
+              </Link>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', maxWidth: '120px', lineHeight: 1.4 }}>Semantic Knowledge Explorer</span>
+              <Link href="/explorer" style={{ textDecoration: 'none' }}>
+                <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>Explore <ArrowRight size={14} /></button>
               </Link>
             </div>
           </div>
         </motion.div>
-
       </div>
 
       {/* About Memora Section */}
@@ -199,34 +202,38 @@ export default function LandingPage() {
         initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
         style={{
           marginTop: '64px',
-          backgroundColor: '#F5F5F0',
+          backgroundColor: '#1c1917',
           borderRadius: '48px',
           padding: '80px',
           textAlign: 'center',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.02)',
-          border: '1px solid rgba(0,0,0,0.04)'
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255,255,255,0.05)'
         }}
       >
-        <h2 style={{ fontSize: '36px', fontFamily: 'Playfair Display, serif', color: '#1c1917', margin: '0 0 16px 0' }}>Get Started</h2>
+        <h2 style={{ fontSize: '36px', fontFamily: 'Playfair Display, serif', color: '#fafaf9', margin: '0 0 16px 0' }}>Get Started</h2>
         {user ? (
           <>
-            <p style={{ fontSize: '16px', color: '#57534e', margin: '0 0 32px 0', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
-              You are signed in! Enter your Memory Vault to view your contextual timeline, insights, and goal tracker.
+            <p style={{ fontSize: '16px', color: '#a8a29e', margin: '0 0 32px 0', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+              You are signed in! Enter your Memory Vault to view your contextual timeline and insights.
             </p>
             <Link href="/memory" style={{ textDecoration: 'none' }}>
-              <button style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '16px 32px', borderRadius: '9999px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <button style={{ backgroundColor: '#ffffff', color: '#1c1917', border: 'none', padding: '16px 32px', borderRadius: '9999px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f4'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.transform = 'translateY(0)'; }}>
                 Enter your Vault <ArrowRight size={16} />
               </button>
             </Link>
           </>
         ) : (
           <>
-            <p style={{ fontSize: '16px', color: '#57534e', margin: '0 0 32px 0', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '16px', color: '#a8a29e', margin: '0 0 32px 0', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
               Join Memora today to create your secure, private, and permanent AI memory vault. Never lose context of a thought again.
             </p>
             <button 
               onClick={() => setIsAuthModalOpen(true)}
-              style={{ backgroundColor: '#292524', color: 'white', border: 'none', padding: '16px 32px', borderRadius: '9999px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              style={{ backgroundColor: '#ffffff', color: '#1c1917', border: 'none', padding: '16px 32px', borderRadius: '9999px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f5f5f4'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               Sign In / Sign Up <ArrowRight size={16} />
             </button>

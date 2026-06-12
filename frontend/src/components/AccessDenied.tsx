@@ -17,7 +17,7 @@ export default function AccessDenied({ pageName }: AccessDeniedProps) {
     <>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        minHeight: 'calc(100vh - 84px)', backgroundColor: '#fdfbf7',
+        minHeight: '100%', backgroundColor: '#fdfbf7',
         padding: '24px',
       }}>
         <div style={{

@@ -12,7 +12,10 @@ from uuid import UUID
 from sqlalchemy import text
 
 from backend.config import settings
-from backend.db.postgres import get_async_session
+from backend.db.postgres import (
+    get_async_session,
+    AsyncSessionLocal,
+)
 
 from backend.models.memory import (
     MemoryCreate,
@@ -31,14 +34,14 @@ DEDUP_QUERY = text(
     SELECT
         id,
         1 - (
-            embedding <=> :query_embedding::vector
+            embedding <=> CAST(:query_embedding AS vector)
         ) AS similarity
     FROM memories
     WHERE
         user_id = :user_id
         AND memory_type = :memory_type
     ORDER BY
-        embedding <=> :query_embedding::vector
+        embedding <=> CAST(:query_embedding AS vector)
     LIMIT 1
     """
 )
@@ -49,7 +52,7 @@ SIMILAR_QUERY = text(
     SELECT
         id,
         1 - (
-            embedding <=> :query_embedding::vector
+            embedding <=> CAST(:query_embedding AS vector)
         ) AS similarity
     FROM memories
     WHERE
@@ -57,11 +60,11 @@ SIMILAR_QUERY = text(
         AND memory_type = :memory_type
         AND (
             1 - (
-                embedding <=> :query_embedding::vector
+                embedding <=> CAST(:query_embedding AS vector)
             )
         ) >= :threshold
     ORDER BY
-        embedding <=> :query_embedding::vector
+        embedding <=> CAST(:query_embedding AS vector)
     LIMIT :top_k
     """
 )
@@ -105,7 +108,7 @@ async def check_duplicate(
 
         params = {
             "query_embedding":
-                memory_create.embedding,
+                str(memory_create.embedding),
             "user_id":
                 user_id,
             "memory_type":
@@ -113,7 +116,7 @@ async def check_duplicate(
         }
 
         async with (
-            get_async_session()
+            AsyncSessionLocal()
             as session
         ):
 
@@ -205,7 +208,7 @@ async def find_similar(
 
         params = {
             "query_embedding":
-                memory_create.embedding,
+                str(memory_create.embedding),
             "user_id":
                 user_id,
             "memory_type":
@@ -217,7 +220,7 @@ async def find_similar(
         }
 
         async with (
-            get_async_session()
+            AsyncSessionLocal()
             as session
         ):
 

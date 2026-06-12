@@ -13,11 +13,19 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
-import torch
+# import torch
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import uuid
+import structlog
+from contextvars import ContextVar
+
+correlation_id: ContextVar[str] = ContextVar("correlation_id", default="")
 
 
 from backend.config import settings
@@ -40,6 +48,7 @@ def configure_logging() -> structlog.stdlib.BoundLogger:
 
     structlog.configure(
         processors=[
+            structlog.contextvars.merge_contextvars,
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.add_log_level,
             structlog.processors.StackInfoRenderer(),
@@ -57,18 +66,6 @@ logger = configure_logging()
 
 
 def resolve_device() -> str:
-    if settings.device != "auto":
-        return settings.device
-
-    if torch.cuda.is_available():
-        return "cuda"
-
-    if (
-        hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_available()
-    ):
-        return "mps"
-
     return "cpu"
 
 
@@ -140,8 +137,8 @@ def register_router(
             router=module_path,
         )
 
-    except ImportError:
-        logger.warning(
+    except Exception:
+        logger.exception(
             "Router unavailable",
             router=module_path,
         )
@@ -158,10 +155,24 @@ async def lifespan(
 
     try:
         await init_db()
+        
+        from backend.db.neo4j_client import init_neo4j, close_neo4j
+        from backend.db.qdrant_client import init_qdrant, close_qdrant
+        await init_neo4j()
+        await init_qdrant()
 
         load_models()
 
+        from backend.core.events.event_router import start_event_router
+        import asyncio
+        # Start the background event router
+        event_router_task = asyncio.create_task(start_event_router())
+
         yield
+        
+        event_router_task.cancel()
+        await close_neo4j()
+        await close_qdrant()
 
     except Exception:
         logger.exception(
@@ -176,24 +187,59 @@ async def lifespan(
 
 
 
+# Rate limiter — per-IP rate limits for API protection.
+# Uses Redis as storage backend for distributed rate limiting.
+# Default: 120 requests/minute globally.
+# Stricter limits applied per-endpoint in individual routers.
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["120/minute"],
+    storage_uri=settings.redis_url,
+)
+
 app = FastAPI(
     title="Memora",
     version="1.0.0",
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
+@app.middleware("http")
+async def correlation_id_middleware(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    correlation_id.set(req_id)
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        request_id=req_id,
+        path=request.url.path,
+        method=request.method,
+    )
+    
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    response.headers["X-Request-ID"] = req_id
+    response.headers["X-Process-Time"] = str(process_time)
+    
+    # Log request completion metrics
+    structlog.get_logger("memora").info(
+        "http_request",
+        status_code=response.status_code,
+        duration_s=round(process_time, 4)
+    )
+    
+    return response
 
 @app.exception_handler(Exception)
 async def global_exception_handler(
@@ -211,9 +257,6 @@ async def global_exception_handler(
             "detail": "Internal server error"
         },
     )
-
-
-
 register_router(
     app,
     "backend.api.chat",
@@ -222,13 +265,13 @@ register_router(
 
 register_router(
     app,
-    "backend.api.memory",
+    "backend.api.dead_letter_queue_api",
     "",
 )
 
 register_router(
     app,
-    "backend.api.goals",
+    "backend.api.memory",
     "",
 )
 
@@ -246,9 +289,11 @@ register_router(
 
 register_router(
     app,
-    "backend.chrome_extension.router",
-    "/api/extension",
+    "backend.api.explore",
+    "",
 )
+
+
 
 register_router(
     app,
@@ -256,17 +301,15 @@ register_router(
     "",
 )
 
+register_router(
+    app,
+    "backend.api.events",
+    "/api",
+)
 
 
-@app.get("/health")
-def health() -> dict[str, Any]:
-    return {
-        "status": "ok",
-        "models_loaded": model_registry.loaded,
-        "device": ACTIVE_DEVICE,
-        "uptime": round(
-            time.time()
-            - APP_STARTED_AT,
-            2,
-        ),
-    }
+register_router(
+    app,
+    "backend.api.health",
+    "",
+)

@@ -15,12 +15,13 @@ from sqlalchemy import text
 from backend.config import settings
 
 from backend.db.postgres import (
-    get_async_session,
+    AsyncSessionLocal,
 )
 
 from backend.models.memory import (
     Memory,
     MemoryCreate,
+    MemoryUpdate,
 )
 
 
@@ -172,7 +173,7 @@ class EmotionalStore:
 
     def __init__(
         self,
-        session_factory=get_async_session,
+        session_factory=AsyncSessionLocal,
     ) -> None:
         self.session_factory = (
             session_factory
@@ -222,14 +223,49 @@ class EmotionalStore:
     def _hydrate(
         row,
     ) -> Memory:
-
+        data = dict(row._mapping)
+        if isinstance(data.get("embedding"), str):
+            import json
+            try:
+                data["embedding"] = json.loads(data["embedding"])
+            except Exception:
+                pass
         return Memory.model_validate(
-            dict(
-                row._mapping
-            )
+            data
         )
 
 
+
+    async def list_recent(
+        self,
+        user_id: UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[Memory]:
+        try:
+            query = text(
+                """
+                SELECT *
+                FROM memories
+                WHERE user_id = :user_id
+                  AND memory_type = 'emotional'
+                ORDER BY created_at DESC
+                LIMIT :limit OFFSET :offset
+                """
+            )
+            async with self.session_factory() as session:
+                result = await session.execute(
+                    query,
+                    {
+                        "user_id": user_id,
+                        "limit": limit,
+                        "offset": offset,
+                    },
+                )
+                rows = result.fetchall()
+            return [self._hydrate(row) for row in rows]
+        except Exception as exc:
+            raise EmotionalStoreError(f"List recent failed: {exc}") from exc
 
     async def save(
         self,
@@ -270,6 +306,10 @@ class EmotionalStore:
                     EMOTIONAL_DECAY_MULTIPLIER
                 )
             )
+
+            import json
+            payload["entities"] = json.dumps(payload.get("entities", []) or [])
+            payload["metadata"] = json.dumps(payload.get("metadata", {}) or {})
 
             async with (
                 self.session_factory()

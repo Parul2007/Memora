@@ -73,7 +73,11 @@ def _mask_redis_url(
 redis_pool = aioredis.ConnectionPool.from_url(
     settings.redis_url,
     decode_responses=True,
-    max_connections=20,
+    max_connections=50,          # increased from 20 — streaming pipeline opens several
+                                  # concurrent connections per request
+    socket_connect_timeout=5,    # fail fast on unreachable Redis
+    socket_timeout=10,           # reclaim stale connections quickly
+    retry_on_timeout=True,
 )
 
 logger.info(

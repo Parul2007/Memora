@@ -372,6 +372,60 @@ class GraphClient:
 
 
 
+    async def get_entity_neighbors(
+        self,
+        entity_text: str,
+        user_id: UUID,
+    ) -> list[dict[str, Any]]:
+        """Get immediate related entities and their relationship strength."""
+        try:
+            cypher = """
+            MATCH (e:Entity {text: $text, user_id: $uid})-[r:RELATED_TO]-(neighbor:Entity {user_id: $uid})
+            RETURN neighbor.text AS text, neighbor.label AS label, r.strength AS strength
+            """
+            async with self.driver.session() as session:
+                result = await session.run(
+                    cypher,
+                    text=entity_text,
+                    uid=str(user_id)
+                )
+                rows = await result.data()
+            return [dict(row) for row in rows]
+        except Exception as exc:
+            raise GraphClientError(f"Neighbor lookup failed: {exc}") from exc
+
+    async def get_entity_context(
+        self,
+        entity_text: str,
+        user_id: UUID,
+    ) -> dict[str, Any]:
+        """Get the full node metadata and direct relationships."""
+        try:
+            cypher = """
+            MATCH (e:Entity {text: $text, user_id: $uid})
+            OPTIONAL MATCH (e)-[:MENTIONED_IN]->(m:Memory)
+            OPTIONAL MATCH (e)-[r:RELATED_TO]-(neighbor:Entity {user_id: $uid})
+            WITH e, m, neighbor, r
+            RETURN 
+                e.text AS text, 
+                e.label AS label, 
+                e.updated_at AS updated_at,
+                COUNT(DISTINCT m) AS mentions,
+                COUNT(DISTINCT neighbor) AS relationships
+            """
+            async with self.driver.session() as session:
+                result = await session.run(
+                    cypher,
+                    text=entity_text,
+                    uid=str(user_id)
+                )
+                record = await result.single()
+            if not record:
+                return {}
+            return dict(record)
+        except Exception as exc:
+            raise GraphClientError(f"Context lookup failed: {exc}") from exc
+
     async def close(
         self,
     ) -> None:

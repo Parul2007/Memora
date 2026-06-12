@@ -1,5 +1,6 @@
 import { useChatStore } from '../stores/chatStore';
 import { StreamState, MemoryItem } from '../types';
+import { emitMemoryEvent, MEMORY_EVENTS } from '../lib/events/memory-events';
 
 export function useChatStream() {
   const { 
@@ -10,6 +11,7 @@ export function useChatStream() {
     updateMessageMemories,
     setThinking, 
     setCompleted,
+    setError,
     addIntelligenceEvent,
     clearIntelligenceEvents,
     commitIntelligenceEvents
@@ -125,20 +127,20 @@ export function useChatStream() {
             addIntelligenceEvent({ type: event, data, timestamp: new Date().toISOString() });
           } else if (event === 'error') {
             setStreamState(StreamState.ERROR);
-            updateMessageStatus(messageId, 'failed');
+            setError(messageId, data.message || 'An error occurred during processing.');
           }
         }
       }
-    } catch (err: any) {
-      if (err?.name === 'AbortError') {
-        // User explicitly cancelled — treat as complete, not error
-        setStreamState(StreamState.COMPLETE);
-        setCompleted(messageId, 0, 0);
-      } else {
-        console.error("Stream failed:", err);
-        setStreamState(StreamState.ERROR);
-        updateMessageStatus(messageId, 'failed');
-      }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          // User explicitly cancelled — treat as complete, not error
+          setStreamState(StreamState.COMPLETE);
+          setCompleted(messageId, 0, 0);
+        } else {
+          console.error("Stream failed:", err);
+          setStreamState(StreamState.ERROR);
+          setError(messageId, err?.message || 'Connection lost. Please try again.');
+        }
     }
   };
 

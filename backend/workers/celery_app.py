@@ -20,6 +20,11 @@ celery_app = Celery(
     "memora",
     broker=settings.redis_url,
     backend=settings.redis_url,
+    include=[
+        "backend.workers.indexing_worker",
+        "backend.workers.consolidation_worker",
+        "backend.workers.decay_worker",
+    ],
 )
 
 
@@ -31,6 +36,7 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     worker_prefetch_multiplier=1,
+    broker_connection_retry_on_startup=True,
     task_routes={
         "workers.indexing_worker.*": {
             "queue": "indexing",

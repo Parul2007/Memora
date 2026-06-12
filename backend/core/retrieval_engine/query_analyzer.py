@@ -165,33 +165,44 @@ class QueryAnalyzer:
                         )
                         continue
 
-                response.raise_for_status()
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    logger.error("HF Inference API Error!")
+                    logger.error(f"URL: {response.request.url}")
+                    logger.error(f"Method: {response.request.method}")
+                    # Hide token in headers log
+                    safe_headers = dict(response.request.headers)
+                    if "authorization" in safe_headers:
+                        safe_headers["authorization"] = "Bearer ***"
+                    logger.error(f"Headers: {safe_headers}")
+                    logger.error(f"Payload: {payload}")
+                    logger.error(f"Status: {response.status_code}")
+                    logger.error(f"Response Body: {response.text}")
+                    if response.status_code in (401, 403):
+                        logger.error(
+                            "Hugging Face API returned %s (Unauthorized/Forbidden) during query analysis. "
+                            "This usually means the configured model requires gated access, or the HF_API_TOKEN is invalid/lacks permissions.\n"
+                            "Model: %s\n"
+                            "To resolve this, please either:\n"
+                            "1. Request and accept model license terms at: https://huggingface.co/%s\n"
+                            "   And ensure your HF_API_TOKEN has 'Read' permission.\n"
+                            "2. Switch to an open-access equivalent model (e.g. Qwen/Qwen2.5-7B-Instruct) in your .env.",
+                            response.status_code,
+                            settings.llm_fast_model_name,
+                            settings.llm_fast_model_name
+                        )
+                    if response.status_code == 400:
+                        raise QueryAnalyzerError(f"HF Inference 400 Bad Request: {response.text}") from e
+                    raise
 
                 data = response.json()
 
-                if isinstance(
-                    data,
-                    list,
-                ):
-                    return (
-                        data[0]
-                        .get(
-                            "generated_text",
-                            "",
-                        )
-                        .strip()
-                    )
+                if isinstance(data, list):
+                    return data[0].get("generated_text", "").strip()
 
-                if isinstance(
-                    data,
-                    dict,
-                ):
-                    return (
-                        data.get(
-                            "generated_text",
-                            ""
-                        ).strip()
-                    )
+                if isinstance(data, dict):
+                    return data.get("generated_text", "").strip()
 
         raise QueryAnalyzerError(
             "Inference failed"

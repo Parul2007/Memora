@@ -113,20 +113,31 @@ _ALLOWED = {
     },
     ConversationState.RECEIVED: {
         ConversationState.PERCEIVED,
+        ConversationState.ERROR,
     },
     ConversationState.PERCEIVED: {
         ConversationState.RETRIEVED,
+        ConversationState.ERROR,
     },
     ConversationState.RETRIEVED: {
         ConversationState.REASONED,
+        ConversationState.GENERATED,
+        ConversationState.ERROR,
     },
     ConversationState.REASONED: {
         ConversationState.GENERATED,
+        ConversationState.ERROR,
     },
     ConversationState.GENERATED: {
         ConversationState.STORING,
+        ConversationState.ERROR,
+        ConversationState.COMPLETE,
     },
     ConversationState.STORING: {
+        ConversationState.COMPLETE,
+        ConversationState.ERROR,
+    },
+    ConversationState.ERROR: {
         ConversationState.COMPLETE,
     },
 }

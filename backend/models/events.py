@@ -48,7 +48,6 @@ class EventType(str, Enum):
 
     DECAY_TICK = "decay_tick"
 
-    GOAL_UPDATED = "goal_updated"
 
     ERROR_OCCURRED = "error_occurred"
 

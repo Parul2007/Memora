@@ -7,8 +7,10 @@ Central orchestration pipeline for Memora.
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import time
+import traceback
 from collections.abc import AsyncGenerator
 from uuid import uuid4, UUID
 
@@ -64,9 +66,50 @@ from backend.core.orchestration.priority_scheduler import (
 from backend.workers.indexing_worker import (
     index_memory,
 )
+from backend.core.events.event_publisher import publish_event
+from backend.core.events.event_types import DomainEvent, EventType
+from backend.models.memory import Memory
 
 
 logger = logging.getLogger(__name__)
+
+
+def safe_create_task(coro, name: str = "unnamed") -> asyncio.Task:
+    """
+    Create an asyncio task with built-in error handling.
+
+    Features:
+    - Logs exceptions with full traceback
+    - Records task name for debugging
+    - Prevents "Task exception was never retrieved" warnings
+    - Handles cancellation gracefully
+
+    Use this instead of raw asyncio.create_task() to ensure background
+    task failures are never silently swallowed.
+
+    Usage:
+        safe_create_task(_increment_session_message_count(sid), "increment_count")
+    """
+    task = asyncio.create_task(coro, name=name)
+
+    def _log_error(t: asyncio.Task) -> None:
+        try:
+            exc = t.exception()
+            if exc is not None:
+                logger.error(
+                    "Background task '%s' failed: %s\n%s",
+                    t.get_name(), exc, traceback.format_exc(),
+                )
+        except asyncio.CancelledError:
+            logger.debug("Background task '%s' was cancelled.", t.get_name())
+        except Exception as log_err:
+            logger.error(
+                "Error handler for task '%s' failed: %s",
+                t.get_name(), log_err,
+            )
+
+    task.add_done_callback(_log_error)
+    return task
 
 
 async def _ensure_session_in_db(
@@ -82,7 +125,8 @@ async def _ensure_session_in_db(
         from sqlalchemy import text
         from datetime import datetime, timezone
 
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             res = await db.execute(
                 text("SELECT id FROM sessions WHERE id = :id"),
                 {"id": session_id},
@@ -117,7 +161,8 @@ async def _update_session_title(
         from backend.db.postgres import get_async_session
         from sqlalchemy import text
 
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             await db.execute(
                 text("UPDATE sessions SET title = :title WHERE id = :id"),
                 {"title": title, "id": session_id},
@@ -134,7 +179,8 @@ async def _increment_session_message_count(session_id: UUID) -> None:
         from backend.db.postgres import get_async_session
         from sqlalchemy import text
 
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             await db.execute(
                 text("UPDATE sessions SET message_count = message_count + 1 WHERE id = :id"),
                 {"id": session_id},
@@ -174,7 +220,8 @@ async def _extract_and_save_user_info(user_id: UUID, text: str) -> None:
         from backend.db.postgres import get_async_session
         from sqlalchemy import text as sqla_text
 
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             now = datetime.now(timezone.utc)
             await db.execute(
                 sqla_text("""
@@ -191,10 +238,10 @@ async def _extract_and_save_user_info(user_id: UUID, text: str) -> None:
         logger.exception("extract_and_save_user_info_failed")
 
 async def get_or_create_user_context(user_id: UUID) -> UserContext:
-    from backend.db.postgres import get_async_session
+    from backend.db.postgres import AsyncSessionLocal
     from sqlalchemy import text
     
-    async for session in get_async_session():
+    async with AsyncSessionLocal() as session:
         res = await session.execute(
             text("SELECT * FROM users WHERE id = :id"),
             {"id": user_id}
@@ -251,7 +298,6 @@ async def get_or_create_user_context(user_id: UUID) -> UserContext:
         return UserContext(
             user=user_model,
             recent_emotional_state=0.0,
-            active_goals_count=0,
             total_memories_count=0,
             persona_keywords=[]
         )
@@ -344,7 +390,8 @@ class CognitiveOrchestrationBus:
                 )
 
                 # Verify session actually exists before attempting message insert
-                async for db in get_async_session():
+                from backend.db.postgres import AsyncSessionLocal
+                async with AsyncSessionLocal() as db:
                     res = await db.execute(
                         text("SELECT id FROM sessions WHERE id = :id"),
                         {"id": session_id},
@@ -363,7 +410,8 @@ class CognitiveOrchestrationBus:
                 await session_store.add_message(session_id=session_id, message=user_msg)
 
                 try:
-                    async for db in get_async_session():
+                    from backend.db.postgres import AsyncSessionLocal
+                    async with AsyncSessionLocal() as db:
                         await db.execute(text(
                             "INSERT INTO messages (id, session_id, role, content) VALUES (:id, :session_id, :role, :content)"
                         ), {"id": user_msg.id, "session_id": session_id, "role": user_msg.role.value, "content": user_msg.content})
@@ -386,8 +434,8 @@ class CognitiveOrchestrationBus:
                         evt_graph = {"event": "graph_update", "data": {"nodes_created": len(perception.entities), "relationships_created": max(0, len(perception.entities) - 1)}, "timestamp": datetime.now(timezone.utc).isoformat()}
                         pipeline_events.append(evt_graph)
                         yield evt_graph
-                except Exception:
-                    logger.exception("Perception stage failed in stream")
+                except Exception as exc:
+                    logger.exception("Perception stage failed in stream", exc_info=exc)
                     perception = None
 
                 retrieved_memories = []
@@ -415,8 +463,8 @@ class CognitiveOrchestrationBus:
                         evt_retrieval = {"event": "retrieval_complete", "data": {"retrieved_memories": retrieval_payload}, "timestamp": datetime.now(timezone.utc).isoformat()}
                         pipeline_events.append(evt_retrieval)
                         yield evt_retrieval
-                    except Exception:
-                        logger.exception("Retrieval stage failed in stream")
+                    except Exception as exc:
+                        logger.exception("Retrieval stage failed in stream", exc_info=exc)
                         turn.retrieved_memories = []
 
                 # Yield memory complete state to UI
@@ -492,7 +540,8 @@ class CognitiveOrchestrationBus:
                         content=response_text,
                     )
                     await session_store.add_message(session_id=session_id, message=assistant_msg)
-                    async for db in get_async_session():
+                    from backend.db.postgres import AsyncSessionLocal
+                    async with AsyncSessionLocal() as db:
                         await db.execute(text(
                             "INSERT INTO messages (id, session_id, role, content) VALUES (:id, :session_id, :role, :content)"
                         ), {"id": assistant_msg.id, "session_id": session_id, "role": assistant_msg.role.value, "content": assistant_msg.content})
@@ -500,9 +549,15 @@ class CognitiveOrchestrationBus:
                 except Exception:
                     logger.exception("assistant store failed")
                     
-                asyncio.create_task(_increment_session_message_count(session_id))
+                safe_create_task(
+                    _increment_session_message_count(session_id),
+                    name=f"increment_count_{session_id}",
+                )
                 if is_new_session:
-                    asyncio.create_task(_update_session_title(session_id, self.generator, turn.query))
+                    safe_create_task(
+                        _update_session_title(session_id, self.generator, turn.query),
+                        name=f"update_title_{session_id}",
+                    )
                 
                 # Yield live cognitive events instead of running in background
                 async for event in self.process_cognitive(turn, response_text):
@@ -518,7 +573,8 @@ class CognitiveOrchestrationBus:
                         assistant_msg.metadata["pipeline_flow"] = pipeline_events
                         await session_store.update_last_message(turn.session_id, assistant_msg)
 
-                        async for db in get_async_session():
+                        from backend.db.postgres import AsyncSessionLocal
+                        async with AsyncSessionLocal() as db:
                             await db.execute(
                                 text("UPDATE messages SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{pipeline_flow}', CAST(:flow AS jsonb)) WHERE id = :id"),
                                 {"flow": json.dumps(pipeline_events), "id": assistant_msg.id}
@@ -549,8 +605,8 @@ class CognitiveOrchestrationBus:
                     self.state_machine.transition(turn, ConversationState.PERCEIVED)
                 except Exception:
                     pass
-            except Exception:
-                logger.exception("Background perception failed")
+            except Exception as exc:
+                logger.exception("Background perception failed", exc_info=exc)
             # 2. Retrieval
             try:
                 if not turn.retrieved_memories:
@@ -570,8 +626,8 @@ class CognitiveOrchestrationBus:
                     self.state_machine.transition(turn, ConversationState.RETRIEVED)
                 except Exception:
                     pass
-            except Exception:
-                logger.exception("Background retrieval failed")
+            except Exception as exc:
+                logger.exception("Background retrieval failed", exc_info=exc)
                 turn.retrieved_memories = []
 
             # 3. Reflection
@@ -585,7 +641,7 @@ class CognitiveOrchestrationBus:
                 index_memory.delay({
                     "user_id": str(turn.user_id),
                     "content": fast_response,
-                    "session_id": str(turn.session_id),
+                    "source_session_id": str(turn.session_id),
                 })
                 
                 # Live memory extraction via LLM
@@ -600,19 +656,19 @@ class CognitiveOrchestrationBus:
                 from backend.config import settings
 
                 prompt = (
-                    "Extract any explicit preferences, personal facts, family details, emotional states, or personal goals/plans stated by the user in this message.\n"
-                    "Summarize them intelligently into concise statements (e.g., 'User\\'s name is Parul', 'User plans to learn piano').\n"
-                    "For each extracted statement, categorize it into exactly one of these types: SEMANTIC, EPISODIC, PROCEDURAL, EMOTIONAL, or GOAL.\n"
+                    "Extract any explicit facts, preferences, personal facts, family details, emotional states, or projects stated by the user in this message.\n"
+                    "Summarize them intelligently into concise statements (e.g., 'User's name is Parul', 'User is building Memora using FastAPI').\n"
+                    "For each extracted statement, categorize it into exactly one of these types: SEMANTIC, EPISODIC, PROCEDURAL, or EMOTIONAL.\n"
                     "Format each line EXACTLY as: Statement | TYPE\n"
                     "Examples:\n"
-                    "User loves Cakes. | SEMANTIC\n"
+                    "User is building Memora using FastAPI. | SEMANTIC\n"
                     "User visited Japan in 2024. | EPISODIC\n"
                     "User knows how to bake bread. | PROCEDURAL\n"
                     "User is feeling sad today. | EMOTIONAL\n"
-                    "User plans to learn piano. | GOAL\n"
                     "Do not use bullet points or numbers. If there are no facts to extract, reply with exactly the word NONE.\n"
                     "Respond with ONLY the extracted statements or NONE."
                 )
+                logger.info(f"Sending extraction prompt to LLM...")
 
                 try:
                     res = await self.generator.client.chat_completion(
@@ -627,6 +683,7 @@ class CognitiveOrchestrationBus:
                     
                     if res and res.choices and len(res.choices) > 0:
                         extracted_text = res.choices[0].message.content.strip()
+                        logger.info(f"LLM Extraction Response: {extracted_text}")
                         if extracted_text and extracted_text.upper() != "NONE":
                             lines = [f.strip() for f in extracted_text.splitlines() if f.strip() and not f.strip().startswith(('•', '-', '*'))]
                             
@@ -641,7 +698,6 @@ class CognitiveOrchestrationBus:
                                 type_str = parts[1].strip().upper() if len(parts) > 1 else "SEMANTIC"
                                 
                                 mem_type = MemoryType.SEMANTIC
-                                is_goal = False
                                 
                                 if type_str == "EMOTIONAL":
                                     mem_type = MemoryType.EMOTIONAL
@@ -649,12 +705,6 @@ class CognitiveOrchestrationBus:
                                     mem_type = MemoryType.EPISODIC
                                 elif type_str == "PROCEDURAL":
                                     mem_type = MemoryType.PROCEDURAL
-                                elif type_str == "GOAL":
-                                    is_goal = True
-                                    mem_type = MemoryType.SEMANTIC # Goals are saved as semantic memories in DB
-                                
-                                if is_goal:
-                                    yield {"event": "goal_tracked", "data": {"content": fact, "status": "ACTIVE"}, "timestamp": datetime.now(timezone.utc).isoformat()}
                                 
                                 embedding = await embed_text(fact)
                                 
@@ -682,8 +732,6 @@ class CognitiveOrchestrationBus:
                                 if is_duplicate:
                                     continue
                                 
-                                mem_id = uuid4()
-                                
                                 # Improved Keyword Importance Scoring
                                 boost_words = ['name', 'family', 'location', 'career', 'goal', 'preference', 'project', 'relationship', 'love', 'hate', 'always', 'never']
                                 reduce_words = ['today', 'recently', 'yesterday', 'tomorrow', 'feeling', 'bit', 'slightly']
@@ -709,6 +757,7 @@ class CognitiveOrchestrationBus:
                                     emotional_weight=0.0 if mem_type != MemoryType.EMOTIONAL else 0.8,
                                     embedding=embedding,
                                     source_session_id=turn.session_id,
+                                    entities=[e.get("text", "") for e in turn.perception_result.entities] if turn.perception_result and turn.perception_result.entities else [],
                                     metadata={
                                         "extracted_live": True,
                                         "session_id": str(turn.session_id),
@@ -716,25 +765,45 @@ class CognitiveOrchestrationBus:
                                     }
                                 )
                                 
-                                if mem_type == MemoryType.EMOTIONAL:
-                                    await emo_store.save(new_memory)
-                                else:
-                                    await sem_store.save(new_memory)
-                                    
-                                yield {"event": "memory_created", "data": {"memory_id": str(mem_id), "content": fact, "memory_type": mem_type.value, "importance_score": importance}, "timestamp": datetime.now(timezone.utc).isoformat()}
-                                logger.info(f"Memory saved successfully: {mem_id}")
+                                from backend.core.long_term_memory.ingestion.gateway import MemoryIngestionGateway
+                                gateway = MemoryIngestionGateway()
+                                persisted_memory = await gateway.ingest(new_memory)
+
+                                if persisted_memory is None:
+                                    continue
+
+                                yield {"event": "memory_created", "data": {"memory_id": str(persisted_memory.id), "content": persisted_memory.content, "memory_type": persisted_memory.memory_type.value, "importance_score": persisted_memory.importance_score}, "timestamp": datetime.now(timezone.utc).isoformat()}
+                                logger.info(f"Memory saved successfully: {persisted_memory.id}")
                                 logger.info(f"Successfully extracted and saved live memory for session {turn.session_id}")
                 except Exception as e:
+                    status = getattr(e, "status", None)
+                    is_auth_error = status in (401, 403) or any(err in str(e) for err in ("401", "403", "Unauthorized", "Forbidden", "gated"))
+                    if is_auth_error:
+                        logger.error(
+                            "Hugging Face API returned 401/403 (Unauthorized/Forbidden) during live memory extraction. "
+                            "This usually means the configured model requires gated access, or the HF_API_TOKEN is invalid/lacks permissions.\n"
+                            "Model: %s\n"
+                            "To resolve this, please either:\n"
+                            "1. Request and accept model license terms at: https://huggingface.co/%s\n"
+                            "   And ensure your HF_API_TOKEN has 'Read' permission.\n"
+                            "2. Switch to an open-access equivalent model (e.g. Qwen/Qwen2.5-72B-Instruct) in your .env.",
+                            settings.llm_model_name,
+                            settings.llm_model_name
+                        )
                     logger.exception(f"Live memory extraction failed: {str(e)} session_id={turn.session_id} user_id={turn.user_id}")
 
-            except Exception:
-                logger.exception("Background reflection failed")
+            except Exception as exc:
+                logger.exception("Background reflection/ingestion failed", exc_info=exc)
                 
             try:
                 self.state_machine.transition(turn, ConversationState.GENERATED)
             except Exception:
                 pass
+            try:
+                self.state_machine.transition(turn, ConversationState.STORING)
+            except Exception:
+                pass
             self.state_machine.transition(turn, ConversationState.COMPLETE)
             logger.info("Completed background cognitive pipeline")
-        except Exception:
-            logger.exception("Background pipeline failed")
+        except Exception as exc:
+            logger.exception("Background pipeline failed", exc_info=exc)

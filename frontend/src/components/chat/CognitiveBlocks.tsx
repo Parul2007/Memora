@@ -1,11 +1,14 @@
+'use client';
+
 import React from 'react';
-import { CheckCircle2, FileText, Target, Network, Database } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CheckCircle2, FileText, Target, Network, Database, BarChart3, LayoutDashboard, Compass, User } from 'lucide-react';
 
 export function ScoreBadge({ score, colorOverride }: { score: number, colorOverride?: string }) {
   const clamp = Math.min(Math.max(score, 0), 1);
   const pct = Math.round(clamp * 100);
   const color = colorOverride || (pct >= 85 ? '#22c55e' : pct >= 65 ? '#f59e0b' : '#6366f1');
-  
+
   return (
     <span style={{ fontSize: '10px', fontWeight: 700, color: color, backgroundColor: `${color}1A`, padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
       {pct}% MATCH
@@ -23,7 +26,7 @@ export function MemoryLearningCard({ data }: { data: any }) {
   let text = '#166534';
   let borderAlpha = '#16653440';
   let badgeBg = '#bbf7d0';
-  
+
   if (type === 'episodic') {
     bg = '#f3e8ff'; // Pastel Purple
     text = '#6b21a8';
@@ -52,7 +55,7 @@ export function MemoryLearningCard({ data }: { data: any }) {
         </div>
         {mem?.importance_score && <ScoreBadge score={mem.importance_score} colorOverride={text} />}
       </div>
-      
+
       <p style={{ margin: 0, fontSize: '13px', color: '#1c1917', lineHeight: '1.5', fontWeight: 500 }}>
         {mem?.content}
       </p>
@@ -129,7 +132,7 @@ export function MemoryRetrievalCard({ data }: { data: any }) {
           {mems.length} FOUND
         </span>
       </div>
-      
+
       {mems.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {mems.map((m: any, i: number) => (
@@ -158,7 +161,7 @@ export interface CognitiveBlock {
 
 export function parseCognitiveBlocks(events: any[], prefix: string = '') {
   const result: CognitiveBlock[] = [];
-  
+
   events.forEach((evt, idx) => {
     // Handle both frontend format (type) and backend DB format (event)
     const eventType = evt.type || evt.event;
@@ -167,7 +170,7 @@ export function parseCognitiveBlocks(events: any[], prefix: string = '') {
     // Use current time as fallback if timestamp is missing from DB
     const ts = evt.timestamp || new Date().toISOString();
     const blockId = prefix + ts + '-' + idx;
-    
+
     if (eventType === 'retrieval_complete') {
       result.push({ id: blockId + '-retrieval', type: 'retrieval', timestamp: ts, data: evt.data });
     } else if (eventType === 'memory_candidate' || eventType === 'memory_created') {
@@ -176,10 +179,10 @@ export function parseCognitiveBlocks(events: any[], prefix: string = '') {
         existing.data.memory = evt.data;
         existing.data.status = eventType === 'memory_created' ? 'persisted' : 'candidate';
       } else {
-        result.push({ 
-          id: blockId + '-learning', 
-          type: 'learning', 
-          timestamp: ts, 
+        result.push({
+          id: blockId + '-learning',
+          type: 'learning',
+          timestamp: ts,
           data: { memory: evt.data, status: eventType === 'memory_created' ? 'persisted' : 'candidate' }
         });
       }
@@ -189,6 +192,68 @@ export function parseCognitiveBlocks(events: any[], prefix: string = '') {
       result.push({ id: blockId + '-goal', type: 'goal', timestamp: ts, data: evt.data });
     }
   });
-  
+
   return result;
+}
+
+// ─── Navigation Buttons ───────────────────────────────────────────────────
+
+interface NavButton {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+const NAV_BUTTONS: NavButton[] = [
+  { label: 'Explore Graph', href: '/graph', icon: <Network size={16} /> },
+  { label: 'Intelligence Explorer', href: '/explorer', icon: <Compass size={16} /> },
+  { label: 'Memory Vault', href: '/memory', icon: <Database size={16} /> },
+  { label: 'User Profile', href: '/profile', icon: <User size={16} /> },
+];
+
+export function CognitiveNavigation({ onNavigate }: { onNavigate?: (href: string) => void }) {
+  const router = useRouter();
+
+  const handleBlockClick = (href: string) => {
+    if (onNavigate) {
+      onNavigate(href);
+    } else {
+      router.push(href);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '4px 0' }}>
+      <div style={{ fontSize: '11px', fontWeight: 700, color: '#78716c', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '4px' }}>
+        Quick Navigation
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', width: '100%' }}>
+        {NAV_BUTTONS.map((btn) => (
+          <button
+            key={btn.href}
+            onClick={() => handleBlockClick(btn.href)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 14px', borderRadius: '10px',
+              backgroundColor: '#f3e8ff', border: '1px solid #e9d5ff',
+              color: '#6b21a8', fontSize: '13px', fontWeight: 600,
+              cursor: 'pointer', textAlign: 'left',
+              transition: 'all 0.15s', width: '100%',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#e9d5ff';
+              e.currentTarget.style.borderColor = '#d8b4fe';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3e8ff';
+              e.currentTarget.style.borderColor = '#e9d5ff';
+            }}
+          >
+            <span style={{ color: '#7e22ce', display: 'flex' }}>{btn.icon}</span>
+            {btn.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }

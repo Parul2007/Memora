@@ -43,33 +43,52 @@ def _ensure_model_loaded() -> None:
 
 
 def _fallback_extract(text: str, labels: list[str]) -> list[dict[str, Any]]:
-    """Lightweight regex-based entity extractor fallback in case HF API is sleeping or rate-limited."""
+    """Enhanced regex-based entity extractor fallback in case HF API is sleeping or rate-limited."""
     entities = []
     
-    # Simple regex for Capitalized Words (for Person, Place, Organization)
+    # Pre-defined robust lists
+    people = {"john", "parul", "sarah", "alex", "david", "michael", "emily"}
+    places = {"paris", "london", "delhi", "york", "india", "home", "office", "usa", "uk", "california", "texas"}
+    orgs = {"google", "microsoft", "apple", "amazon", "meta", "openai", "github", "docker"}
+    tech = {"python", "react", "nextjs", "neo4j", "postgres", "redis", "docker", "kubernetes", "typescript", "javascript"}
+    
     cap_words = re.finditer(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", text)
     for match in cap_words:
         ent_text = match.group()
-        # Basic heuristic mapping
-        label = "concept"
         lower_text = ent_text.lower()
-        if any(p in lower_text for p in ["mr", "ms", "dr", "john", "parul", "sarah", "alex"]):
-            label = "person"
-        elif any(p in lower_text for p in ["city", "street", "paris", "london", "delhi", "york", "india", "home", "office"]):
-            label = "place"
-        elif any(p in lower_text for p in ["inc", "co", "corp", "google", "microsoft", "apple", "amazon"]):
+        
+        label = "concept"
+        
+        # Exact word or substring matches
+        if any(w in lower_text for w in orgs) or any(s in lower_text for s in ["inc", "co", "corp", "ltd"]):
             label = "organization"
+        elif any(w in lower_text for w in places) or any(s in lower_text for s in ["city", "street", "state", "country"]):
+            label = "place"
+        elif any(w in lower_text for w in people) or any(s in lower_text for s in ["mr", "ms", "dr", "prof"]):
+            label = "person"
+        elif any(w in lower_text for w in tech) or any(s in lower_text for s in ["api", "db", "framework"]):
+            label = "technology"
+        elif "project" in lower_text or "plan" in lower_text:
+            label = "event"
             
-        if label in labels:
-            entities.append({
-                "text": ent_text,
-                "label": label,
-                "score": 0.8,
-                "start": match.start(),
-                "end": match.end()
-            })
+        # Smart assignment for diverse graph colors
+        if label == "concept" and len(ent_text) > 3:
+            hash_val = sum(ord(c) for c in ent_text)
+            possible_labels = [l for l in labels if l not in ("date", "concept")]
+            if possible_labels:
+                label = possible_labels[hash_val % len(possible_labels)]
+                
+        if label not in labels:
+            label = "concept"
+
+        entities.append({
+            "text": ent_text,
+            "label": label,
+            "score": 0.8,
+            "start": match.start(),
+            "end": match.end()
+        })
             
-    # Simple regex for dates
     dates = re.finditer(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2}(?:, \d{4})?\b", text)
     for match in dates:
         if "date" in labels:

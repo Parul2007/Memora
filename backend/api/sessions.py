@@ -30,7 +30,8 @@ logger = logging.getLogger(__name__)
 async def _summarize_session(session_id: UUID, user_id: UUID):
     try:
         generator = ResponseGenerator()
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             # Get messages
             res = await db.execute(
                 text("SELECT role, content FROM messages WHERE session_id = :session_id ORDER BY created_at ASC"),
@@ -65,7 +66,8 @@ async def list_sessions(
 ):
     """List all sessions for the current user, newest first."""
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             result = await db.execute(
                 text("""
                     SELECT id, title, started_at, ended_at,
@@ -131,7 +133,8 @@ async def update_session(
         return {"status": "ok", "message": "No updates provided"}
 
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             await db.execute(
                 text(f"""
                     UPDATE sessions SET {", ".join(updates)}
@@ -163,7 +166,8 @@ async def delete_session(
 ):
     """Delete a session record."""
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             await db.execute(
                 text("""
                     DELETE FROM sessions
@@ -186,7 +190,8 @@ async def export_session(
 ):
     """Export a single session and its messages."""
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             # Get session
             res = await db.execute(
                 text("SELECT * FROM sessions WHERE id = :session_id AND user_id = :user_id"),
@@ -236,7 +241,8 @@ async def export_all_sessions(
 ):
     """Export all sessions and messages for the user."""
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             res = await db.execute(
                 text("SELECT * FROM sessions WHERE user_id = :user_id ORDER BY started_at DESC"),
                 {"user_id": current_user}

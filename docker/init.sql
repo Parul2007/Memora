@@ -76,48 +76,6 @@ COMMENT ON TABLE sessions IS
 
 
 
-CREATE TABLE IF NOT EXISTS goals (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-    user_id UUID NOT NULL
-        REFERENCES users(id)
-        ON DELETE CASCADE,
-
-    title VARCHAR(500) NOT NULL,
-
-    description TEXT,
-
-    status VARCHAR(20) NOT NULL DEFAULT 'active'
-        CHECK (
-            status IN (
-                'active',
-                'completed',
-                'abandoned'
-            )
-        ),
-
-    priority INTEGER NOT NULL DEFAULT 1,
-
-    target_date DATE,
-
-    progress_pct FLOAT NOT NULL DEFAULT 0.0
-        CHECK (
-            progress_pct >= 0
-            AND progress_pct <= 100
-        ),
-
-    milestones JSONB NOT NULL DEFAULT '[]'::jsonb,
-
-    habits JSONB NOT NULL DEFAULT '[]'::jsonb,
-
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE goals IS
-'Stores user goals, milestone progression and habit tracking.';
-
 
 
 CREATE TABLE IF NOT EXISTS memories (
@@ -219,12 +177,6 @@ ON sessions (is_consolidated);
 
 
 
-CREATE INDEX IF NOT EXISTS idx_goals_user
-ON goals (user_id);
-
-CREATE INDEX IF NOT EXISTS idx_goals_status
-ON goals (status);
-
 
 
 CREATE INDEX IF NOT EXISTS idx_memories_user
@@ -265,15 +217,6 @@ FOR EACH ROW
 EXECUTE FUNCTION updated_at_trigger();
 
 
-
-DROP TRIGGER IF EXISTS trg_goals_updated_at
-ON goals;
-
-CREATE TRIGGER trg_goals_updated_at
-BEFORE UPDATE
-ON goals
-FOR EACH ROW
-EXECUTE FUNCTION updated_at_trigger();
 
 
 

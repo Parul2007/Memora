@@ -7,7 +7,22 @@
  */
 
 import { apiFetch } from './apiClient';
-import { MemoryData } from './mockMemories';
+export interface MemoryData {
+  id: string;
+  content: string;
+  type: string;
+  importance: number;
+  decayFactor: number;
+  accessed: number;
+  timestamp: string;
+  dateObj: Date;
+  /** Entity tags extracted from the memory. Always an array (may be empty).
+   *  Marked optional so TypeScript enforces a guard at every callsite — if a
+   *  raw API response bypasses toMemoryData() the field may be absent. */
+  tags?: string[];
+  source: string;
+  pinned: boolean;
+}
 
 // ── Backend shapes ────────────────────────────────────────────────────────────
 
@@ -31,6 +46,26 @@ export interface MemoryStats {
   procedural: number;
   emotional: number;
   total: number;
+}
+
+export interface IntelligenceData {
+  metrics: {
+    total_memories: number;
+    recent_memories: number;
+    archived_memories: number;
+  };
+  memory_health: {
+    healthy: number;
+    aging: number;
+    conflicting: number;
+    orphaned: number;
+  };
+  topics: { name: string; mentions: number; growth: number }[];
+  entities: { id: string; name: string; mentions: number; connections: number }[];
+  trends: {
+    fastest_growing_topic: string;
+    strongest_entity: string;
+  };
 }
 
 // ── Shape mapping ─────────────────────────────────────────────────────────────
@@ -76,6 +111,11 @@ export async function fetchMemories(): Promise<MemoryData[]> {
 /** Fetch aggregate memory type counts. */
 export async function fetchMemoryStats(): Promise<MemoryStats> {
   return apiFetch<MemoryStats>('/api/memory/stats');
+}
+
+/** Fetch full intelligence report. */
+export async function fetchIntelligence(): Promise<IntelligenceData> {
+  return apiFetch<IntelligenceData>('/api/memory/intelligence');
 }
 
 /** Fetch a single memory by id. */

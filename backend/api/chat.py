@@ -84,7 +84,6 @@ def _validate_user(
 
 @router.post(
     "/",
-    response_model=ChatResponse,
 )
 async def chat(
     chat_request: ChatRequest,
@@ -92,78 +91,37 @@ async def chat(
         get_current_user
     ),
 ):
-    started = (
-        time.perf_counter()
+    """
+    Synchronous chat is not supported in V2.
+
+    Memora's cognitive pipeline is streaming-only.
+    Use POST /api/chat/stream with an SSE-capable client.
+    """
+    _validate_user(current_user, chat_request)
+
+    logger.info(
+        "sync_chat_rejected: user=%s session=%s — redirecting to /stream",
+        chat_request.user_id,
+        chat_request.session_id,
     )
 
-    _validate_user(
-        current_user,
-        chat_request,
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": {
+                "type": "streaming_required",
+                "message": (
+                    "This endpoint does not support synchronous responses. "
+                    "Memora's cognitive pipeline is streaming-only. "
+                    "Please use POST /api/chat/stream with an "
+                    "Accept: text/event-stream header."
+                ),
+                "correct_endpoint": "/api/chat/stream",
+                "docs": "Send the same request body to /api/chat/stream "
+                        "and read Server-Sent Events (SSE).",
+            }
+        },
     )
-
-    try:
-        print(
-            (
-                "Chat request: "
-                f"user={chat_request.user_id}, "
-                f"session={chat_request.session_id}, "
-                "stream=False"
-            )
-        )
-
-        response = (
-            await bus.process(
-                chat_request
-            )
-        )
-
-        if (
-            hasattr(
-                response,
-                "__aiter__",
-            )
-        ):
-            raise ChatAPIError(
-                (
-                    "Streaming response "
-                    "returned to sync endpoint."
-                )
-            )
-
-        response.response_time_ms = (
-            int(
-                (
-                    time.perf_counter()
-                    - started
-                )
-                * 1000
-            )
-        )
-
-        return response
-
-    except Exception as exc:
-        logger.exception("chat_failed", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": {
-                    "message": str(
-                        exc
-                    ),
-                    "type": (
-                        "chat_processing_error"
-                    ),
-                    "response_time_ms": int(
-                        (
-                            time.perf_counter()
-                            - started
-                        )
-                        * 1000
-                    ),
-                }
-            },
-        )
 
 
 @router.post(
@@ -294,7 +252,8 @@ async def save_feedback(
     from backend.db.postgres import get_async_session
     from sqlalchemy import text
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             # Dynamically create table if it doesn't exist
             await db.execute(text("""
                 CREATE TABLE IF NOT EXISTS message_feedback (
@@ -331,7 +290,7 @@ class PrecomputeRequest(BaseModel):
 @router.post("/precompute")
 async def chat_precompute(
     req: PrecomputeRequest,
-    current_user: UUID = None,
+    current_user: UUID = Depends(get_current_user),
 ):
     # In V2, we might warm up embeddings or connections here
     # For now, it's a silent no-op that just keeps the db pool and connection warm
@@ -362,7 +321,8 @@ async def history(
         from sqlalchemy import text
         from backend.models.message import Message
 
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             res = await db.execute(
                 text("""
                     SELECT id, role, content, created_at, metadata 
@@ -454,7 +414,8 @@ async def wipe_user_data(
     from backend.db.postgres import get_async_session
     from sqlalchemy import text
     try:
-        async for db in get_async_session():
+        from backend.db.postgres import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
             await db.execute(text("DELETE FROM memories WHERE user_id = :uid"), {"uid": current_user})
             await db.execute(text("DELETE FROM messages WHERE session_id IN (SELECT id FROM sessions WHERE user_id = :uid)"), {"uid": current_user})
             await db.execute(text("DELETE FROM sessions WHERE user_id = :uid"), {"uid": current_user})

@@ -24,7 +24,7 @@ body {
 
 .responsive-sidebar-layout {
   display: flex;
-  height: calc(100vh - 84px);
+  height: 100%;
 }
 
 .responsive-sidebar {

@@ -67,34 +67,3 @@ export interface MemoryItem {
   duplicateOf?: string;
 }
 
-export interface Milestone {
-  id: string;
-  title: string;
-  date: string;
-  status: 'completed' | 'at risk' | 'pending' | 'overdue';
-}
-
-export interface Goal {
-  id: string;
-  title: string;
-  priority: 'HIGH' | 'MED' | 'LOW';
-  status: string;
-  progress: number;
-  dueDate: string;
-  createdAt: string;
-  description: string;
-  milestones: Milestone[];
-  linkedHabits: string[];
-  linkedMemoriesCount: number;
-  lastUpdated: string;
-}
-
-export interface Habit {
-  id: string;
-  title: string;
-  frequency: string;
-  insight: string;
-  triggers: string[];
-  sentiment: 'positive' | 'negative' | 'mixed';
-  memoriesLinked: number;
-}

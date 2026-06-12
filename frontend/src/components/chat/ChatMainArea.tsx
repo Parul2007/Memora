@@ -9,6 +9,7 @@ import { apiFetch, ApiError } from '../../services/apiClient';
 import { useAuth } from '../../lib/AuthContext';
 import { useChatStore } from '../../stores/chatStore';
 import { useChatStream } from '../../hooks/useChatStream';
+import { emitMemoryEvent, MEMORY_EVENTS } from '../../lib/events/memory-events';
 
 export default function ChatMainArea() {
   const { user } = useAuth();
@@ -342,6 +343,7 @@ export default function ChatMainArea() {
         body: JSON.stringify({ content: newContent })
       });
       setMemories(activeMemories.map(m => m.id === memoryId ? { ...m, content: newContent } : m));
+      emitMemoryEvent(MEMORY_EVENTS.MemoryUpdated, { memoryId });
     } catch (e) {
       console.error("Failed to update memory", e);
     }
@@ -351,6 +353,7 @@ export default function ChatMainArea() {
     try {
       await apiFetch(`/api/memory/${memoryId}`, { method: 'DELETE' });
       setMemories(activeMemories.filter(m => m.id !== memoryId));
+      emitMemoryEvent(MEMORY_EVENTS.MemoryDeleted, { memoryId });
     } catch (e) {
       console.error("Failed to delete memory", e);
     }
@@ -358,7 +361,7 @@ export default function ChatMainArea() {
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minHeight: 0 }}>
         
         {isSaving && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>

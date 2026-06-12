@@ -1,6 +1,7 @@
 # ---------- API ----------
 fastapi==0.115.0
 uvicorn[standard]==0.30.0
+slowapi==0.1.9
 
 # ---------- Config ----------
 pydantic==2.7.4
@@ -62,6 +63,9 @@ tenacity==8.3.0
 # ---------- Testing ----------
 pytest==8.4.0
 pytest-asyncio==1.1.0
+
+# ---------- Events / SSE ----------
+sse-starlette>=2.1.0,<3.0.0
 
 # ---------- Quality ----------
 ruff==0.12.0

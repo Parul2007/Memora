@@ -92,37 +92,7 @@ class Planner:
                     "empathetic"
                 )
 
-            goals = getattr(
-                user_context,
-                "active_goals",
-                [],
-            )
 
-            if (
-                strategy
-                == "answer"
-                and goals
-            ):
-                for goal in goals:
-                    goal_text = str(
-                        goal
-                    ).lower()
-
-                    tokens = [
-                        t
-                        for t in goal_text.split()
-                        if len(t) > 3
-                    ]
-
-                    if any(
-                        token
-                        in query_lower
-                        for token in tokens
-                    ):
-                        strategy = (
-                            "goal_check"
-                        )
-                        break
 
             if (
                 strategy

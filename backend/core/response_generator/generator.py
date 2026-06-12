@@ -108,7 +108,21 @@ class ResponseGenerator:
                 return text
 
             except Exception as exc:
-                if attempt < 2 and any(e in str(exc) for e in ["502", "503", "504", "Gateway", "timeout"]):
+                status = getattr(exc, "status", None)
+                is_auth_error = status in (401, 403) or any(err in str(exc) for err in ("401", "403", "Unauthorized", "Forbidden", "gated"))
+                if is_auth_error:
+                    logger.error(
+                        "Hugging Face API returned 401/403 (Unauthorized/Forbidden) during response generation. "
+                        "This usually means the configured model requires gated access, or the HF_API_TOKEN is invalid/lacks permissions.\n"
+                        "Model: %s\n"
+                        "To resolve this, please either:\n"
+                        "1. Request and accept model license terms at: https://huggingface.co/%s\n"
+                        "   And ensure your HF_API_TOKEN has 'Read' permission.\n"
+                        "2. Switch to an open-access equivalent model (e.g. Qwen/Qwen2.5-72B-Instruct) in your .env.",
+                        settings.llm_model_name,
+                        settings.llm_model_name
+                    )
+                if attempt < 2 and not is_auth_error and any(e in str(exc) for e in ["502", "503", "504", "Gateway", "timeout"]):
                     import asyncio
                     await asyncio.sleep(2)
                     continue
@@ -157,7 +171,21 @@ class ResponseGenerator:
                 return
 
             except Exception as exc:
-                if attempt < 2 and any(e in str(exc) for e in ["502", "503", "504", "Gateway", "timeout"]):
+                status = getattr(exc, "status", None)
+                is_auth_error = status in (401, 403) or any(err in str(exc) for err in ("401", "403", "Unauthorized", "Forbidden", "gated"))
+                if is_auth_error:
+                    logger.error(
+                        "Hugging Face API returned 401/403 (Unauthorized/Forbidden) during response streaming. "
+                        "This usually means the configured model requires gated access, or the HF_API_TOKEN is invalid/lacks permissions.\n"
+                        "Model: %s\n"
+                        "To resolve this, please either:\n"
+                        "1. Request and accept model license terms at: https://huggingface.co/%s\n"
+                        "   And ensure your HF_API_TOKEN has 'Read' permission.\n"
+                        "2. Switch to an open-access equivalent model (e.g. Qwen/Qwen2.5-72B-Instruct) in your .env.",
+                        settings.llm_model_name,
+                        settings.llm_model_name
+                    )
+                if attempt < 2 and not is_auth_error and any(e in str(exc) for e in ["502", "503", "504", "Gateway", "timeout"]):
                     import asyncio
                     await asyncio.sleep(2)
                     continue

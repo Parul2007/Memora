@@ -94,9 +94,15 @@ class SessionStore:
             )
 
         except Exception as exc:
-            raise SessionStoreError(
-                f"Failed to store message: {exc}"
-            ) from exc
+            # Redis is a hot-cache only — PostgreSQL is the authoritative store.
+            # Log and swallow so a connection pool blip never kills a chat response.
+            logger.warning(
+                "session_store.add_message: Redis unavailable (session=%s): %s — "
+                "message will still be persisted to PostgreSQL.",
+                session_id,
+                exc,
+            )
+            return
 
     async def update_last_message(
         self,
@@ -159,9 +165,13 @@ class SessionStore:
             ]
 
         except Exception as exc:
-            raise SessionStoreError(
-                f"Failed to load session: {exc}"
-            ) from exc
+            # Redis unavailable — return empty list so the caller falls back to PostgreSQL.
+            logger.warning(
+                "session_store.get_messages: Redis unavailable (session=%s): %s",
+                session_id,
+                exc,
+            )
+            return []
 
 
 

@@ -205,18 +205,9 @@ class EntityLinker:
                     }
                 )
 
-                MERGE
-                (
-                    e1
-                )
-                -
-                [
-                    :RELATED_TO
-                ]
-                -
-                (
-                    e2
-                )
+                MERGE (e1)-[r:RELATED_TO]->(e2)
+                ON CREATE SET r.strength = 1
+                ON MATCH SET r.strength = COALESCE(r.strength, 1) + 1
                 """
 
                 await (

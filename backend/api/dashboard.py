@@ -23,9 +23,7 @@ from backend.dependencies import (
 from backend.db.postgres import (
     AsyncSessionLocal,
 )
-from backend.core.goal_planning.goal_tracker import (
-    GoalTracker,
-)
+
 from backend.core.long_term_memory.stores.procedural_store import (
     ProceduralStore,
 )
@@ -48,6 +46,18 @@ router = APIRouter(
 CACHE_TTL = 300
 
 
+from backend.services.dashboard_intelligence import dashboard_intelligence_service
+
+@router.get("/intelligence")
+async def dashboard_intelligence(current_user: UUID = Depends(get_current_user)):
+    """
+    Primary dashboard intelligence endpoint.
+    Delegates entirely to DashboardIntelligenceService.
+    """
+    return await dashboard_intelligence_service.get(current_user)
+
+
+
 class DashboardSummary(
     BaseModel,
 ):
@@ -56,10 +66,10 @@ class DashboardSummary(
         str,
         int,
     ]
-    active_goals: int
-    completed_goals: int
+    active_concepts: int
+    recent_events: int
     emotional_baseline: float
-    top_habits: list[
+    top_concepts: list[
         str
     ]
     memory_health_score: float
@@ -95,9 +105,6 @@ class MemoryHealthBreakdown(
     decayed: int
 
 
-goal_tracker = (
-    GoalTracker()
-)
 
 procedural_store = (
     ProceduralStore()
@@ -202,11 +209,7 @@ async def summary(
         for row in totals
     }
 
-    active = len(
-        await goal_tracker.list_active(
-            current_user
-        )
-    )
+    active = 0
 
     completed = max(
         0,
@@ -233,12 +236,12 @@ async def summary(
             memories.values()
         ),
         memories_by_type=memories,
-        active_goals=active,
-        completed_goals=completed,
+        active_concepts=active,
+        recent_events=completed,
         emotional_baseline=baseline,
-        top_habits=[
-            h["name"]
-            for h in habits[
+        top_concepts=[
+            c["name"]
+            for c in habits[
                 :5
             ]
         ],

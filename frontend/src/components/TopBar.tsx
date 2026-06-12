@@ -47,23 +47,21 @@ export default function TopBar() {
     { label: 'Chat', href: '/chat' },
     { label: 'Memory', href: '/memory' },
     { label: 'Graph', href: '/graph' },
-    { label: 'Insights', href: '/insights' },
-    { label: 'Goals', href: '/goals' },
+    { label: 'Explore', href: '/explorer' },
+
   ];
 
   const publicLinks = [
     { label: 'Home', href: '/' },
-    { label: 'Extension Hub', href: '/extension-hub' },
   ];
 
   const allNavLinks = [
     { label: 'Home', href: '/', protected: false },
-    { label: 'Extension Hub', href: '/extension-hub', protected: true },
     { label: 'Chat', href: '/chat', protected: true },
     { label: 'Memory', href: '/memory', protected: true },
     { label: 'Graph', href: '/graph', protected: true },
-    { label: 'Insights', href: '/insights', protected: true },
-    { label: 'Goals', href: '/goals', protected: true },
+    { label: 'Explore', href: '/explorer', protected: true },
+
   ];
 
   const handleNavClick = (e: React.MouseEvent, link: typeof allNavLinks[0]) => {

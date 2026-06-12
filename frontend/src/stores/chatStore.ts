@@ -17,6 +17,7 @@ interface ChatState {
   setThinking: (id: string, phase: string, duration?: number, memoriesUsed?: number) => void;
   setCompleted: (id: string, tokens: number, duration: number) => void;
   appendMessageMemory: (memory: MemoryItem) => void;
+  setError: (id: string, errorMessage?: string) => void;
   addIntelligenceEvent: (event: any) => void;
   clearIntelligenceEvents: () => void;
   commitIntelligenceEvents: (messageId: string) => void;
@@ -89,6 +90,14 @@ export const useChatStore = create<ChatState>((set) => ({
     };
   }),
   
+  setError: (id, errorMessage) => set((state) => {
+    return {
+      messages: state.messages.map(msg =>
+        msg.id === id ? { ...msg, status: 'failed', isError: true, content: errorMessage || msg.content } : msg
+      )
+    };
+  }),
+
   appendMessageMemory: (memory) => set((state) => {
     const msgs = [...state.messages];
     for (let i = msgs.length - 1; i >= 0; i--) {

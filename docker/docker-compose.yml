@@ -157,7 +157,12 @@ services:
       - ../backend:/app/backend
       - model_cache:/app/.model_cache
 
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
 
     command:
       [
@@ -207,8 +212,15 @@ services:
       - worker
       - --loglevel=info
       - --pool=solo
+      - -Q
+      - celery,indexing,consolidation,maintenance
 
-
+    healthcheck:
+      test: ["CMD", "celery", "-A", "backend.workers.celery_app", "inspect", "ping", "--timeout", "5"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
 
     depends_on:
       backend:

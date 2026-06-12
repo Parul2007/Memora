@@ -227,7 +227,7 @@ function MessageBubble({ msg, isLast, onMemoryPillClick, onRegenerate, onEditMes
     // Don't show cognitive bar during REFLECTING if response content already exists
     !(activeStreamState === StreamState.REFLECTING && msg.content.length > 0);
 
-  if (!isUser && !msg.content && !isCurrentAssistantStreaming) {
+  if (!isUser && !msg.content && !isCurrentAssistantStreaming && !msg.isError) {
     return null; 
   }
 
