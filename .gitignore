@@ -23,3 +23,6 @@ frontend/.env.local
 # Trace files
 trace*
 *_trace*
+
+# Local Documentation
+PROJECT_SUMMARY.md
