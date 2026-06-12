@@ -29,7 +29,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: A
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: 'http://localhost:3000/auth/callback',
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 

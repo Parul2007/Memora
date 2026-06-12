@@ -48,6 +48,7 @@ class QdrantError(Exception):
 
 qdrant = AsyncQdrantClient(
     url=settings.qdrant_url,
+    api_key=settings.qdrant_api_key,
 )
 
 logger.info(

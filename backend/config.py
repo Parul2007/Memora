@@ -60,6 +60,11 @@ class Settings(BaseSettings):
         default="memories",
     )
 
+    qdrant_api_key: str | None = Field(
+        default=None,
+        alias="QDRANT_API_KEY",
+    )
+
     # Neo4j
 
     neo4j_uri: str = Field(
