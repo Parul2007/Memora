@@ -16,10 +16,12 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
+_redis_url = settings.redis_url.split("?")[0]  # strip ?ssl_cert_reqs etc.
+
 celery_app = Celery(
     "memora",
-    broker=settings.redis_url,
-    backend=settings.redis_url,
+    broker=_redis_url,
+    backend=_redis_url,
     include=[
         "backend.workers.indexing_worker",
         "backend.workers.consolidation_worker",
@@ -37,6 +39,9 @@ celery_app.conf.update(
     task_track_started=True,
     worker_prefetch_multiplier=1,
     broker_connection_retry_on_startup=True,
+    # SSL for Upstash rediss:// connections
+    broker_use_ssl={"ssl_cert_reqs": None} if _redis_url.startswith("rediss://") else None,
+    redis_backend_use_ssl={"ssl_cert_reqs": None} if _redis_url.startswith("rediss://") else None,
     task_routes={
         "workers.indexing_worker.*": {
             "queue": "indexing",

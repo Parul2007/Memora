@@ -18,6 +18,7 @@ dashboard caching, and adaptive_learner.
 from __future__ import annotations
 
 import logging
+import ssl
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
 
@@ -70,14 +71,24 @@ def _mask_redis_url(
 # CRITICAL:
 # decode_responses=True is mandatory —
 # raw bytes silently break session_store.py
+#
+# For Upstash (rediss://), ssl_cert_reqs must be passed explicitly.
+# redis-py does NOT read ssl_cert_reqs from the URL query string.
+_redis_url = settings.redis_url.split("?")[0]  # strip any query params
+_ssl_kwargs = (
+    {"ssl_cert_reqs": ssl.CERT_NONE}
+    if _redis_url.startswith("rediss://")
+    else {}
+)
+
 redis_pool = aioredis.ConnectionPool.from_url(
-    settings.redis_url,
+    _redis_url,
     decode_responses=True,
-    max_connections=50,          # increased from 20 — streaming pipeline opens several
-                                  # concurrent connections per request
-    socket_connect_timeout=5,    # fail fast on unreachable Redis
-    socket_timeout=10,           # reclaim stale connections quickly
+    max_connections=50,
+    socket_connect_timeout=5,
+    socket_timeout=10,
     retry_on_timeout=True,
+    **_ssl_kwargs,
 )
 
 logger.info(
