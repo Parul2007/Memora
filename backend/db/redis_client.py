@@ -72,14 +72,18 @@ def _mask_redis_url(
 # decode_responses=True is mandatory —
 # raw bytes silently break session_store.py
 #
-# For Upstash (rediss://), ssl_cert_reqs must be passed explicitly.
-# redis-py does NOT read ssl_cert_reqs from the URL query string.
-_redis_url = settings.redis_url.split("?")[0]  # strip any query params
-_ssl_kwargs = (
-    {"ssl_cert_reqs": ssl.CERT_NONE}
-    if _redis_url.startswith("rediss://")
-    else {}
-)
+# For Upstash (rediss://), we build a real ssl.SSLContext and pass it
+# as ssl_context. redis-py 5.x does NOT reliably handle ssl_cert_reqs
+# kwarg — the only safe approach is a pre-built SSLContext object.
+_redis_url = settings.redis_url.split("?")[0]  # strip any ?ssl_cert_reqs query params
+
+if _redis_url.startswith("rediss://"):
+    _ssl_context = ssl.create_default_context()
+    _ssl_context.check_hostname = False
+    _ssl_context.verify_mode = ssl.CERT_NONE
+    _ssl_kwargs: dict = {"ssl_context": _ssl_context}
+else:
+    _ssl_kwargs = {}
 
 redis_pool = aioredis.ConnectionPool.from_url(
     _redis_url,
@@ -90,6 +94,7 @@ redis_pool = aioredis.ConnectionPool.from_url(
     retry_on_timeout=True,
     **_ssl_kwargs,
 )
+
 
 logger.info(
     "Redis pool created: %s",
