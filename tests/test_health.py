@@ -18,12 +18,14 @@ async def test_readiness_probe_success(async_client: AsyncClient, monkeypatch):
     mock_db = AsyncMock()
     mock_db.execute.return_value = None
     
-    mock_neo4j = AsyncMock()
+    from unittest.mock import MagicMock
+    mock_neo4j = MagicMock()
     # Properly mock the async context manager for neo4j.session()
+    mock_session_ctx = AsyncMock()
     mock_session = AsyncMock()
     mock_session.run = AsyncMock(return_value=None)
-    mock_neo4j.session.return_value.__aenter__.return_value = mock_session
-    mock_neo4j.session.return_value.__aexit__.return_value = None
+    mock_session_ctx.__aenter__.return_value = mock_session
+    mock_neo4j.session.return_value = mock_session_ctx
     
     mock_redis = AsyncMock()
     mock_redis.ping.return_value = True

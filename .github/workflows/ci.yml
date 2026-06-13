@@ -44,7 +44,7 @@ jobs:
           IS_DEVELOPMENT: true
           # We skip neo4j/qdrant in basic CI or mock them
         run: |
-          pytest tests/
+          PYTHONPATH=. pytest tests/
 
   build-docker:
     runs-on: ubuntu-latest
