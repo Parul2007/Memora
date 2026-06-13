@@ -157,7 +157,7 @@ export default function ChatMainArea() {
     try {
       abortControllerRef.current = new AbortController();
       
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://memora-production-1232.up.railway.app';
       const streamUrl = `${baseUrl.replace(/\/$/, '')}/api/chat/stream`;
 
       await connectStream(streamUrl, {
@@ -264,7 +264,7 @@ export default function ChatMainArea() {
     
     setMessages([...newMessages, assistantMsg]);
     
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://memora-production-1232.up.railway.app';
     const streamUrl = `${baseUrl.replace(/\/$/, '')}/api/chat/stream`;
 
     try {
@@ -305,7 +305,7 @@ export default function ChatMainArea() {
     
     setMessages([...truncated, userMsg, assistantMsg]);
     
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://memora-production-1232.up.railway.app';
     const streamUrl = `${baseUrl.replace(/\/$/, '')}/api/chat/stream`;
 
     try {
