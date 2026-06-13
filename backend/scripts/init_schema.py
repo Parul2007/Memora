@@ -39,9 +39,10 @@ async def run_init_schema():
     
     try:
         async with engine.begin() as conn:
-            # Execute the raw SQL statements
-            # The init.sql uses IF NOT EXISTS and is fully idempotent
-            await conn.execute(text(sql_content))
+            # Execute the raw SQL statements bypassing SQLAlchemy prepared statements
+            # which do not support multiple statements separated by semicolons.
+            raw_conn = await conn.get_raw_connection()
+            await raw_conn.driver_connection.execute(sql_content)
             
         logger.info("Database schema initialization completed successfully.")
     except Exception as e:
