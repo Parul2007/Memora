@@ -48,7 +48,11 @@ class Settings(BaseSettings):
     def validate_postgres_url(cls, v: str) -> str:
         # Supabase specific fixes to ensure asyncpg and Session pooler
         if "supabase" in v:
-            v = v.replace(":6543", ":5432")
+            if ":6543" in v:
+                raise ValueError(
+                    "Supabase Transaction Mode detected.\n"
+                    "Memora requires Session Mode (5432) because asyncpg prepared statements are used."
+                )
             if v.startswith("postgres://"):
                 v = v.replace("postgres://", "postgresql+asyncpg://", 1)
             elif v.startswith("postgresql://"):

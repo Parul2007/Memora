@@ -71,6 +71,26 @@ async def readiness_probe(
         health_status["components"]["qdrant"] = "failed"
         is_ready = False
         
+    # Check Hugging Face (External dependency, failure does not crash the app)
+    import httpx
+    from backend.config import settings
+    try:
+        if settings.hf_api_token:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                hf_response = await client.get(
+                    "https://huggingface.co/api/whoami-v2",
+                    headers={"Authorization": f"Bearer {settings.hf_api_token}"}
+                )
+                if hf_response.status_code == 200:
+                    health_status["components"]["huggingface"] = "ok"
+                else:
+                    health_status["components"]["huggingface"] = f"failed_status_{hf_response.status_code}"
+        else:
+            health_status["components"]["huggingface"] = "missing_token"
+    except Exception as e:
+        logger.error(f"Hugging Face health check failed: {e}")
+        health_status["components"]["huggingface"] = "failed_network"
+
     # Check Model Registry
     try:
         health_status["components"]["models"] = "ok" if model_registry.loaded else "not_loaded"
