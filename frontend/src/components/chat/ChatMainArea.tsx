@@ -160,6 +160,7 @@ export default function ChatMainArea() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://memora-production-1232.up.railway.app';
       const streamUrl = `${baseUrl.replace(/\/$/, '')}/api/chat/stream`;
 
+      setStreamState(StreamState.THINKING);
       await connectStream(streamUrl, {
         user_id: user?.id || '00000000-0000-0000-0000-000000000001',
         session_id: sessionIdRef.current,
@@ -269,6 +270,7 @@ export default function ChatMainArea() {
 
     try {
       abortControllerRef.current = new AbortController();
+      setStreamState(StreamState.THINKING);
       await connectStream(streamUrl, {
         user_id: user?.id || '00000000-0000-0000-0000-000000000001',
         session_id: sessionIdRef.current,
@@ -310,6 +312,7 @@ export default function ChatMainArea() {
 
     try {
       abortControllerRef.current = new AbortController();
+      setStreamState(StreamState.THINKING);
       await connectStream(streamUrl, {
         user_id: user?.id || '00000000-0000-0000-0000-000000000001',
         session_id: sessionIdRef.current,
