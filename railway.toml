@@ -3,4 +3,4 @@ builder = "DOCKERFILE"
 dockerfilePath = "docker/Dockerfile.backend"
 
 [deploy]
-startCommand = "bash /app/backend/start.sh web"
+startCommand = "bash /app/backend/start.sh"
