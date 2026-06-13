@@ -89,10 +89,7 @@ export default function TopBar() {
 
   return (
     <>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '20px 48px', backgroundColor: 'transparent'
-      }}>
+      <div className="flex items-center justify-between px-6 md:px-12 py-5 bg-transparent">
         {/* Logo Left */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', color: '#1c1917' }}>
           <img src="/logo.png" alt="Memora Logo" style={{ width: '40px', height: '40px', borderRadius: '12px', objectFit: 'cover' }} />

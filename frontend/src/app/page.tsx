@@ -22,7 +22,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <main style={{ padding: '0 48px 120px 48px', maxWidth: '1440px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <main className="px-6 md:px-12 pb-24 md:pb-32 max-w-[1440px] mx-auto flex flex-col gap-8 w-full overflow-hidden">
       
       {/* Hero Section (Video Box - No Text) */}
       <motion.div 
@@ -45,7 +45,7 @@ export default function LandingPage() {
       </motion.div>
 
       {/* Three Column Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Box 1: Real AI Logos & Assistant */}
         <motion.div 
@@ -76,7 +76,7 @@ export default function LandingPage() {
             <img src="https://www.google.com/s2/favicons?domain=manus.im&sz=128" alt="Manus" width={24} height={24} style={{ borderRadius: '6px' }} />
           </motion.div>
 
-          <h2 style={{ fontSize: '28px', fontFamily: 'Playfair Display, serif', textAlign: 'center', margin: 0, color: '#1c1917', position: 'relative', zIndex: 10, lineHeight: 1.3 }}>
+          <h2 className="text-[24px] lg:text-[28px] font-['Playfair_Display'] text-center m-0 text-stone-900 relative z-10 leading-snug">
             From scattered chats<br/>to a clear Panorama—<br/>Track your mind with Memora
           </h2>
         </motion.div>
@@ -164,24 +164,11 @@ export default function LandingPage() {
       {/* About Memora Section */}
       <motion.div 
         initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }}
-        style={{
-          marginTop: '64px',
-          backgroundColor: '#FAFAF9', /* Very light neutral stone/grey */
-          borderRadius: '48px',
-          padding: '80px 120px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 40px 80px rgba(0,0,0,0.03)',
-          border: '1px solid rgba(0,0,0,0.02)'
-        }}
+        className="mt-16 bg-[#FAFAF9] rounded-[32px] lg:rounded-[48px] p-8 lg:p-20 flex flex-col items-center text-center relative overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.03)] border border-black/5"
       >
         <div style={{ display: 'inline-flex', padding: '8px 16px', backgroundColor: '#f5f5f4', color: '#57534e', borderRadius: '9999px', fontSize: '13px', fontWeight: 600, marginBottom: '32px' }}>About Memora</div>
         
-        <h2 style={{ fontSize: '48px', fontFamily: 'Playfair Display, serif', color: '#1c1917', margin: '0 0 32px 0', lineHeight: 1.1, maxWidth: '800px' }}>
+        <h2 className="text-4xl lg:text-5xl font-['Playfair_Display'] text-stone-900 mb-8 leading-tight max-w-[800px]">
           The Architecture of Continuity
         </h2>
         
@@ -200,17 +187,9 @@ export default function LandingPage() {
       {/* Get Started Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
-        style={{
-          marginTop: '64px',
-          backgroundColor: '#1c1917',
-          borderRadius: '48px',
-          padding: '80px',
-          textAlign: 'center',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          border: '1px solid rgba(255,255,255,0.05)'
-        }}
+        className="mt-16 bg-stone-900 rounded-[32px] lg:rounded-[48px] p-8 lg:p-20 text-center shadow-[0_20px_40px_rgba(0,0,0,0.1)] border border-white/5"
       >
-        <h2 style={{ fontSize: '36px', fontFamily: 'Playfair Display, serif', color: '#fafaf9', margin: '0 0 16px 0' }}>Get Started</h2>
+        <h2 className="text-3xl lg:text-4xl font-['Playfair_Display'] text-stone-50 mb-4">Get Started</h2>
         {user ? (
           <>
             <p style={{ fontSize: '16px', color: '#a8a29e', margin: '0 0 32px 0', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
